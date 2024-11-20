@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+Flask = "==2.0.1"
+firebase-admin = "==5.1.0"
+Flask-Cors = "==3.0.10"
+pandas = "==1.4.0"
+requests = "==2.31.0"
+python-dotenv = "==0.19.1"
+Werkzeug = "==2.3.0"
+numpy = ">=1.22.4"
+networkx = "==2.6.3"
+pyvis = "==0.1.9.0"
+websockets = ">=10.0"
+protobuf = ">=3.10.0,<4"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9.19"

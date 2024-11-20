@@ -1,0 +1,80 @@
+<html>
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" type="text/css" />
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"> </script>
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+
+<style type="text/css">
+
+        #mynetwork {
+            width: 100%;
+            height: 1200px;
+            background-color: #000000;
+            border: 1px solid lightgray;
+            position: relative;
+            float: left;
+        }
+
+        
+
+        
+
+        
+</style>
+
+</head>
+
+<body>
+<div id = "mynetwork"></div>
+
+
+<script type="text/javascript">
+
+    // initialize global variables.
+    var edges;
+    var nodes;
+    var network; 
+    var container;
+    var options, data;
+
+    
+    // This method is responsible for drawing the graph, returns the drawn network
+    function drawGraph() {
+        var container = document.getElementById('mynetwork');
+        
+        
+
+        // parsing and collecting nodes and edges from the python
+        nodes = new vis.DataSet([{"color": "red", "font": {"color": "white"}, "id": "0xA60C772958a3eD56c1F15dD055bA37AC8e523a0D", "label": "0xA60C...523a0D", "shape": "dot", "title": "0xA60C772958a3eD56c1F15dD055bA37AC8e523a0D"}, {"color": "orange", "font": {"color": "white"}, "id": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "label": "0x8589...1fda16", "shape": "dot", "title": "0x8589427373d6d84e98730d7795d8f6f8731fda16"}, {"color": "blue", "font": {"color": "white"}, "id": "0xa43ce8cc89eff3aa5593c742fc56a30ef2427cb0", "label": "0xa43c...427cb0", "shape": "dot", "title": "0xa43ce8cc89eff3aa5593c742fc56a30ef2427cb0"}, {"color": "blue", "font": {"color": "white"}, "id": "0x1291435efcb58c5346f54fad4d4eee20a81624d8", "label": "0x1291...1624d8", "shape": "dot", "title": "0x1291435efcb58c5346f54fad4d4eee20a81624d8"}, {"color": "blue", "font": {"color": "white"}, "id": "0x40f41c762763436d73de1bafb11729c36ad32a54", "label": "0x40f4...d32a54", "shape": "dot", "title": "0x40f41c762763436d73de1bafb11729c36ad32a54"}, {"color": "blue", "font": {"color": "white"}, "id": "0xd83d10af7c5ac6e7a8ee3480cac2252f3c5a1f14", "label": "0xd83d...5a1f14", "shape": "dot", "title": "0xd83d10af7c5ac6e7a8ee3480cac2252f3c5a1f14"}, {"color": "blue", "font": {"color": "white"}, "id": "0x7ad0bdc8208bae8a9234198c4bcdc022303c8eb0", "label": "0x7ad0...3c8eb0", "shape": "dot", "title": "0x7ad0bdc8208bae8a9234198c4bcdc022303c8eb0"}, {"color": "blue", "font": {"color": "white"}, "id": "0xa6f438062de069fe5682deabd6fdb61a6002d4d2", "label": "0xa6f4...02d4d2", "shape": "dot", "title": "0xa6f438062de069fe5682deabd6fdb61a6002d4d2"}, {"color": "blue", "font": {"color": "white"}, "id": "0xc0c6108d6eb2f59319a50319f108e5dc1734b38b", "label": "0xc0c6...34b38b", "shape": "dot", "title": "0xc0c6108d6eb2f59319a50319f108e5dc1734b38b"}, {"color": "blue", "font": {"color": "white"}, "id": "0x01598e22f6f50170bb75ee6ea52986435f56634b", "label": "0x0159...56634b", "shape": "dot", "title": "0x01598e22f6f50170bb75ee6ea52986435f56634b"}, {"color": "blue", "font": {"color": "white"}, "id": "0x4425a275730cdb4652509ab2bb5a966518e1b139", "label": "0x4425...e1b139", "shape": "dot", "title": "0x4425a275730cdb4652509ab2bb5a966518e1b139"}, {"color": "blue", "font": {"color": "white"}, "id": "0x29cbeae596572da22649f5c871b8f74dfe137395", "label": "0x29cb...137395", "shape": "dot", "title": "0x29cbeae596572da22649f5c871b8f74dfe137395"}, {"color": "blue", "font": {"color": "white"}, "id": "0xe6a66ebf93c5fb287753b894a53e2de77124cbac", "label": "0xe6a6...24cbac", "shape": "dot", "title": "0xe6a66ebf93c5fb287753b894a53e2de77124cbac"}, {"color": "blue", "font": {"color": "white"}, "id": "0x392516e6707137bd97c4dea533b05d24daaaa464", "label": "0x3925...aaa464", "shape": "dot", "title": "0x392516e6707137bd97c4dea533b05d24daaaa464"}, {"color": "blue", "font": {"color": "white"}, "id": "0x321a1f4026c5d4c48e71c4f0f0d1b3f17e9d200b", "label": "0x321a...9d200b", "shape": "dot", "title": "0x321a1f4026c5d4c48e71c4f0f0d1b3f17e9d200b"}, {"color": "blue", "font": {"color": "white"}, "id": "0x3620d737323c19556f6c69fd8ca1bbf8e8794574", "label": "0x3620...794574", "shape": "dot", "title": "0x3620d737323c19556f6c69fd8ca1bbf8e8794574"}, {"color": "blue", "font": {"color": "white"}, "id": "0xff4976b6071f31871fc5eff7c7ae5f3d65b65b5c", "label": "0xff49...b65b5c", "shape": "dot", "title": "0xff4976b6071f31871fc5eff7c7ae5f3d65b65b5c"}, {"color": "blue", "font": {"color": "white"}, "id": "0xcfc55d6aa4051bc9c02c7f57828e671e952243ab", "label": "0xcfc5...2243ab", "shape": "dot", "title": "0xcfc55d6aa4051bc9c02c7f57828e671e952243ab"}, {"color": "blue", "font": {"color": "white"}, "id": "0xcf34cef0b70110540f9e7632b0457eb490fa94ac", "label": "0xcf34...fa94ac", "shape": "dot", "title": "0xcf34cef0b70110540f9e7632b0457eb490fa94ac"}, {"color": "blue", "font": {"color": "white"}, "id": "0x4b5160ab8efec1742f20a74428e08790cbc90a48", "label": "0x4b51...c90a48", "shape": "dot", "title": "0x4b5160ab8efec1742f20a74428e08790cbc90a48"}, {"color": "blue", "font": {"color": "white"}, "id": "0x309bfde577940f904d03d3fe18689d40edc6a284", "label": "0x309b...c6a284", "shape": "dot", "title": "0x309bfde577940f904d03d3fe18689d40edc6a284"}, {"color": "blue", "font": {"color": "white"}, "id": "0xfd1be33afee9791dde1854abd7f6a1de66996654", "label": "0xfd1b...996654", "shape": "dot", "title": "0xfd1be33afee9791dde1854abd7f6a1de66996654"}, {"color": "blue", "font": {"color": "white"}, "id": "0xd6b4f84db0a6229c718dd3b5d77b0fed8fff8fb6", "label": "0xd6b4...ff8fb6", "shape": "dot", "title": "0xd6b4f84db0a6229c718dd3b5d77b0fed8fff8fb6"}, {"color": "blue", "font": {"color": "white"}, "id": "0x92e52fad9a5b14c4fb95abecea665b66266e3940", "label": "0x92e5...6e3940", "shape": "dot", "title": "0x92e52fad9a5b14c4fb95abecea665b66266e3940"}, {"color": "blue", "font": {"color": "white"}, "id": "0x062a9c179d67ae6fa2bff4f0cfe28518169a7226", "label": "0x062a...9a7226", "shape": "dot", "title": "0x062a9c179d67ae6fa2bff4f0cfe28518169a7226"}, {"color": "blue", "font": {"color": "white"}, "id": "0xcef8ae74ba6fe894616f6368564a4f0d264a50f5", "label": "0xcef8...4a50f5", "shape": "dot", "title": "0xcef8ae74ba6fe894616f6368564a4f0d264a50f5"}, {"color": "blue", "font": {"color": "white"}, "id": "0x9432ea45f0cd4a7a703dfa64c0ed7b2035919833", "label": "0x9432...919833", "shape": "dot", "title": "0x9432ea45f0cd4a7a703dfa64c0ed7b2035919833"}, {"color": "blue", "font": {"color": "white"}, "id": "0x0691a532717fa905ba6b13b46dbf85083caeabd9", "label": "0x0691...aeabd9", "shape": "dot", "title": "0x0691a532717fa905ba6b13b46dbf85083caeabd9"}, {"color": "blue", "font": {"color": "white"}, "id": "0xf9d3b40e0d2a6a691f442d7ee08619026cdced86", "label": "0xf9d3...dced86", "shape": "dot", "title": "0xf9d3b40e0d2a6a691f442d7ee08619026cdced86"}, {"color": "blue", "font": {"color": "white"}, "id": "0xd1300054ea25892e0b12ddcbad22038102f50dd6", "label": "0xd130...f50dd6", "shape": "dot", "title": "0xd1300054ea25892e0b12ddcbad22038102f50dd6"}, {"color": "blue", "font": {"color": "white"}, "id": "0xe943b18e3399de8bacedb19a01fe1ccb07fa1007", "label": "0xe943...fa1007", "shape": "dot", "title": "0xe943b18e3399de8bacedb19a01fe1ccb07fa1007"}, {"color": "blue", "font": {"color": "white"}, "id": "0x1ec4de886d40d487366cde7664767db1df6a02e7", "label": "0x1ec4...6a02e7", "shape": "dot", "title": "0x1ec4de886d40d487366cde7664767db1df6a02e7"}, {"color": "blue", "font": {"color": "white"}, "id": "0x1e9f72c28b227cbb56577dc6f693b95237ac0bfe", "label": "0x1e9f...ac0bfe", "shape": "dot", "title": "0x1e9f72c28b227cbb56577dc6f693b95237ac0bfe"}, {"color": "blue", "font": {"color": "white"}, "id": "0x1dff7cd0e7ff958c3517da1747e7c556e1ae6a37", "label": "0x1dff...ae6a37", "shape": "dot", "title": "0x1dff7cd0e7ff958c3517da1747e7c556e1ae6a37"}]);
+        edges = new vis.DataSet([{"from": "0xA60C772958a3eD56c1F15dD055bA37AC8e523a0D", "to": "0x8589427373d6d84e98730d7795d8f6f8731fda16"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xa43ce8cc89eff3aa5593c742fc56a30ef2427cb0"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x8589427373d6d84e98730d7795d8f6f8731fda16"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x1291435efcb58c5346f54fad4d4eee20a81624d8"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x40f41c762763436d73de1bafb11729c36ad32a54"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xd83d10af7c5ac6e7a8ee3480cac2252f3c5a1f14"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x7ad0bdc8208bae8a9234198c4bcdc022303c8eb0"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xa6f438062de069fe5682deabd6fdb61a6002d4d2"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xc0c6108d6eb2f59319a50319f108e5dc1734b38b"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x01598e22f6f50170bb75ee6ea52986435f56634b"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x4425a275730cdb4652509ab2bb5a966518e1b139"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x29cbeae596572da22649f5c871b8f74dfe137395"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xe6a66ebf93c5fb287753b894a53e2de77124cbac"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x392516e6707137bd97c4dea533b05d24daaaa464"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x321a1f4026c5d4c48e71c4f0f0d1b3f17e9d200b"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x3620d737323c19556f6c69fd8ca1bbf8e8794574"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xff4976b6071f31871fc5eff7c7ae5f3d65b65b5c"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xcfc55d6aa4051bc9c02c7f57828e671e952243ab"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xcf34cef0b70110540f9e7632b0457eb490fa94ac"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x4b5160ab8efec1742f20a74428e08790cbc90a48"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x309bfde577940f904d03d3fe18689d40edc6a284"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xfd1be33afee9791dde1854abd7f6a1de66996654"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xd6b4f84db0a6229c718dd3b5d77b0fed8fff8fb6"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x92e52fad9a5b14c4fb95abecea665b66266e3940"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x062a9c179d67ae6fa2bff4f0cfe28518169a7226"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xcef8ae74ba6fe894616f6368564a4f0d264a50f5"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x9432ea45f0cd4a7a703dfa64c0ed7b2035919833"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x0691a532717fa905ba6b13b46dbf85083caeabd9"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xf9d3b40e0d2a6a691f442d7ee08619026cdced86"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xd1300054ea25892e0b12ddcbad22038102f50dd6"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0xe943b18e3399de8bacedb19a01fe1ccb07fa1007"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x1ec4de886d40d487366cde7664767db1df6a02e7"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x1e9f72c28b227cbb56577dc6f693b95237ac0bfe"}, {"from": "0x8589427373d6d84e98730d7795d8f6f8731fda16", "to": "0x1dff7cd0e7ff958c3517da1747e7c556e1ae6a37"}]);
+
+        // adding nodes and edges to the graph
+        data = {nodes: nodes, edges: edges};
+
+        var options = {"physics": {"stabilization": {"enabled": true, "iterations": 1000}, "solver": "forceAtlas2Based", "forceAtlas2Based": {"gravitationalConstant": -100, "centralGravity": 0.01, "springLength": 100, "springConstant": 0.08, "damping": 0.4, "avoidOverlap": 0.2}}, "interaction": {"hideEdgesOnDrag": true, "tooltipDelay": 200}};
+        
+        
+
+        
+
+        network = new vis.Network(container, data, options);
+	 
+        
+
+
+        
+
+        return network;
+
+    }
+
+    drawGraph();
+
+</script>
+</body>
+</html>

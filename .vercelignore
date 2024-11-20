@@ -1,0 +1,8 @@
+requirements.txt
+Pipfile
+Pipfile.lock
+node_modules/
+*.cache/
+api/unique/flagged.json
+api/data/
+api/known_origins/

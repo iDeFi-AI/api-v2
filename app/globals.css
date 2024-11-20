@@ -1,0 +1,159 @@
+/* Global styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 255, 255, 255; 
+  --background-end-rgb: 255, 255, 255; 
+  --primary-color: #ff9f66;
+  --primary-hover-color: #ff5733;
+  --secondary-color: #e94e77;
+  --secondary-hover-color: #d94065;
+  --download-color: #4caf50;
+  --download-hover-color: #388e3c;
+  --neorange: #ff9f66;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --foreground-rgb: 0, 0, 0;
+    --background-start-rgb: 255, 255, 255; 
+    --background-end-rgb: 255, 255, 255;
+  }
+}
+
+@font-face {
+  font-family: 'Oxanium';
+  src: url('Oxanium-VariableFont_wght.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+h2, h3, p {
+    margin: 1rem;
+
+}
+
+html, body {
+  padding: 0;
+  margin: 0;
+  font-family: 'Oxanium', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  line-height: 1.6;
+  font-size: 18px;
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+}
+
+.sticky-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background-color: white; /* Set your desired background color */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Add shadow for a raised effect */
+}
+
+/* Footer */
+#App\:Footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #FFFFFF; /* Set your desired background color */
+  padding: 10px; /* Adjust padding as needed */
+  box-shadow: 0px -2px 5px rgba(0, 0, 0, 0.1); /* Optional: Add shadow for visual effect */
+  z-index: 1000; /* Ensure it is above other content */
+}
+
+/* Main Container */
+.main-container {
+  display: flex;
+  align-items: flex-start;
+  padding-bottom: 80px; /* Ensure enough space for the fixed footer */
+}
+
+/* Navigation Container */
+.nav-container {
+  width: 200px; /* Adjust width as needed */
+  background-color: #fff;
+  border-right: 3px solid #000; /* Border line on the right */
+  height: 100vh; /* Height 100% of viewport */
+  overflow-y: auto;
+  cursor: pointer; /* Allow scrolling if content exceeds height */
+}
+
+/* Navigation Item */
+.nav-container ul li {
+  padding: 10px; /* Adjust padding as needed */
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+  border-radius: 2.5px; /* Add color transition */
+}
+
+/* Highlight on Hover */
+.nav-container ul li:hover {
+  background-color: #fff;
+  color: #000; /* Change text color on hover */
+}
+
+/* Highlight on Selection */
+.nav-container ul li.active {
+  background-color: #000;
+  color: #fff;
+  width: 100%; /* Adjust selection color as needed */
+}
+
+/* Even Vertical Spacing */
+.nav-container ul {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 75%; /* Occupy full height of nav-container */
+}
+
+/* Content Container */
+.content-container {
+  flex: 1;
+  padding: 20px;
+}
+
+/* Code Container */
+.code-container {
+  max-width: 100%;
+  overflow-x: auto; /* Allow horizontal scrolling if the content overflows */
+  border: 2px solid #000;
+  border-radius: 5px;
+  padding: 20px;
+  margin-bottom: 20px; /* Add some space between code snippets */
+  background-color: #f8f8f8; /* Light background for better readability */
+}
+
+/* Responsive Code Snippet */
+.code-snippet {
+  font-size: 14px; /* Adjust font size as needed */
+  line-height: 1.5; /* Adjust line height as needed */
+  white-space: pre-wrap; /* Wrap long lines to prevent overflow */
+  word-wrap: break-word; /* Break long words to fit within the container */
+  overflow-wrap: break-word; /* Handle long words that cause overflow */
+  background-color: #f8f8f8; /* Match the background with the container */
+  padding: 10px; /* Add padding to the code snippet */
+  border-radius: 5px; /* Slight border radius for a more polished look */
+}
+
+@media (max-width: 768px) {
+  .nav-container {
+    width: 100%;
+    position: relative;
+    height: auto;
+    border-right: none;
+  }
+  .content-container {
+    margin-left: 0;
+    padding-top: 10px;
+  }
+}

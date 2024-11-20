@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://api-v2-idefi-ai-774576244405.us-west3.run.app"
+    }
+  ]
+}
