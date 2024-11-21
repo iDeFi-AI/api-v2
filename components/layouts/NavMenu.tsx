@@ -31,6 +31,7 @@ const menuItems = [
 
 const NavMenu: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Authentication state
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,11 +39,17 @@ const NavMenu: React.FC = () => {
       setIsScrolled(window.scrollY > 10);
     };
 
+    const checkAuthToken = () => {
+      const authToken = document.cookie.includes('auth_token'); // Check for authentication token
+      setIsAuthenticated(authToken);
+    };
+
     window.addEventListener('scroll', handleScroll);
+    checkAuthToken(); // Run on component mount
+
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Function to show the loading overlay and navigate
   const handleNavigation = async (url: string) => {
     setLoading(true);
     setTimeout(() => {
@@ -51,12 +58,61 @@ const NavMenu: React.FC = () => {
     }, 500); // Simulated loading delay
   };
 
-  // Function to auto-collapse the dropdown menu after selection
-  const handleLinkClick = () => {
-    const activeDisclosure = document.querySelector('[aria-expanded="true"]');
-    if (activeDisclosure) {
-      (activeDisclosure as HTMLElement).click();
+  const renderMenuItem = (item: any) => {
+    if (!isAuthenticated && item.url !== '/') {
+      // Lock menu items for unauthenticated users (except Logout)
+      return (
+        <div
+          key={item.label}
+          className="flex items-center space-x-1 text-gray-500 cursor-not-allowed"
+          title="Please log in to access"
+        >
+          {item.icon && <span>{item.icon}</span>}
+          <span>{item.label}</span>
+        </div>
+      );
     }
+
+    if (item.children) {
+      return (
+        <div className="relative" key={item.label}>
+          <Disclosure>
+            {({ open }) => (
+              <>
+                <Disclosure.Button className="inline-flex items-center space-x-1 text-gray-700 hover:text-lightlaven">
+                  {item.icon && <span>{item.icon}</span>}
+                  <span className="text-sm font-medium">{item.label}</span>
+                  <ChevronDownIcon
+                    className={`h-5 w-5 transform ${open ? 'rotate-180' : 'rotate-0'}`}
+                  />
+                </Disclosure.Button>
+                <Disclosure.Panel className="absolute mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                  <div className="py-1">
+                    {item.children.map((subItem: any) => (
+                      <HeaderNavLink href={subItem.url} key={subItem.label}>
+                        <div className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-lightlaven">
+                          {subItem.icon && <span>{subItem.icon}</span>}
+                          <span>{subItem.label}</span>
+                        </div>
+                      </HeaderNavLink>
+                    ))}
+                  </div>
+                </Disclosure.Panel>
+              </>
+            )}
+          </Disclosure>
+        </div>
+      );
+    }
+
+    return (
+      <HeaderNavLink href={item.url} key={item.label}>
+        <div className="flex items-center space-x-1 text-gray-700 hover:text-lightlaven">
+          {item.icon && <span>{item.icon}</span>}
+          <span>{item.label}</span>
+        </div>
+      </HeaderNavLink>
+    );
   };
 
   return (
@@ -75,63 +131,12 @@ const NavMenu: React.FC = () => {
               <div className="flex h-16 justify-between">
                 <div className="flex px-2 lg:px-0">
                   <div className="flex flex-shrink-0 items-center">
-                    <Link href="/docs">
-                      <NextImage
-                        className="h-8 w-auto"
-                        src={LogoImage}
-                        alt="Logo"
-                        width={210}
-                        height={125}
-                      />
+                    <Link href="/">
+                      <NextImage className="h-8 w-auto" src={LogoImage} alt="Logo" width={210} height={125} />
                     </Link>
                   </div>
                 </div>
-                <div className="flex flex-1 items-center justify-center px-2 lg:ml-6 lg:justify-end">
-                  <div className="hidden lg:flex lg:space-x-8">
-                    {menuItems.map((item) =>
-                      item.children ? (
-                        <div className="relative" key={item.label}>
-                          <Disclosure>
-                            {({ open }) => (
-                              <>
-                                <Disclosure.Button className="inline-flex items-center space-x-1 text-gray-700 hover:text-lightlaven">
-                                  {item.icon && <span>{item.icon}</span>}
-                                  <span className="text-sm font-medium">{item.label}</span>
-                                  <ChevronDownIcon
-                                    className={`h-5 w-5 transform ${open ? 'rotate-180' : 'rotate-0'}`}
-                                  />
-                                </Disclosure.Button>
-                                <Disclosure.Panel className="absolute mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                                  <div className="py-1">
-                                    {item.children.map((subItem) => (
-                                      <button
-                                        key={subItem.label}
-                                        onClick={() => handleNavigation(subItem.url)}
-                                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-lightlaven w-full text-left"
-                                      >
-                                        {subItem.icon && <span>{subItem.icon}</span>}
-                                        <span>{subItem.label}</span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </Disclosure.Panel>
-                              </>
-                            )}
-                          </Disclosure>
-                        </div>
-                      ) : (
-                        <button
-                          key={item.label}
-                          onClick={() => handleNavigation(item.url)}
-                          className="flex items-center space-x-1 text-gray-700 hover:text-lightlaven"
-                        >
-                          {item.icon && <span>{item.icon}</span>}
-                          <span>{item.label}</span>
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
+                <div className="hidden lg:flex lg:space-x-8">{menuItems.map(renderMenuItem)}</div>
                 <div className="flex items-center lg:hidden">
                   <Disclosure.Button className="relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-lightlaven">
                     <span className="sr-only">Open main menu</span>
@@ -147,45 +152,7 @@ const NavMenu: React.FC = () => {
 
             <Disclosure.Panel className="lg:hidden">
               <div className="flex flex-col items-center space-y-2 py-3">
-                {menuItems.map((item) =>
-                  item.children ? (
-                    <Disclosure key={item.label} as="div">
-                      {({ open }) => (
-                        <>
-                          <Disclosure.Button className="flex w-full items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-lightlaven">
-                            <span className="text-sm font-medium">
-                              {item.icon} {item.label}
-                            </span>
-                            <ChevronDownIcon
-                              className={`h-5 w-5 transform ${open ? 'rotate-180' : 'rotate-0'}`}
-                            />
-                          </Disclosure.Button>
-                          <Disclosure.Panel className="space-y-1">
-                            {item.children.map((subItem) => (
-                              <button
-                                key={subItem.label}
-                                onClick={() => handleNavigation(subItem.url)}
-                                className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-lightlaven w-full text-left"
-                              >
-                                {subItem.icon && <span>{subItem.icon}</span>}
-                                <span>{subItem.label}</span>
-                              </button>
-                            ))}
-                          </Disclosure.Panel>
-                        </>
-                      )}
-                    </Disclosure>
-                  ) : (
-                    <button
-                      key={item.label}
-                      onClick={() => handleNavigation(item.url)}
-                      className="flex items-center space-x-2 block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-lightlaven"
-                    >
-                      {item.icon && <span>{item.icon}</span>}
-                      <span>{item.label}</span>
-                    </button>
-                  )
-                )}
+                {menuItems.map(renderMenuItem)}
               </div>
             </Disclosure.Panel>
           </>
