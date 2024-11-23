@@ -2,7 +2,7 @@ import os
 import json
 import re
 import logging
-from api.etherscanv2 import (
+from api.tools.etherscanv2 import (
     build_etherscan_api_v2_url,
     get_etherscan_v2_details,
     is_valid_ethereum_address,

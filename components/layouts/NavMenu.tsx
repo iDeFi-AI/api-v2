@@ -6,9 +6,10 @@ import Link from 'next/link';
 import LogoImage from '@/public/shortV2.png';
 import HeaderNavLink from './HeaderNavLink';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileCode, faFlaskVial, faBook, faShieldAlt, faCogs, faDatabase, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faFileCode, faFlaskVial, faBook, faShieldAlt, faCogs, faDatabase, faEye, faUser } from '@fortawesome/free-solid-svg-icons';
+import { auth } from '@/utilities/firebaseClient'; // Firebase authentication
+import { signOut } from 'firebase/auth';
 
-// Define menu items with icons and dropdowns for submenus
 const menuItems = [
   { icon: <FontAwesomeIcon icon={faBook} />, label: 'Docs', url: '/docs' },
   { icon: <FontAwesomeIcon icon={faFileCode} />, label: 'Devs', url: '/devs' },
@@ -26,7 +27,8 @@ const menuItems = [
       { icon: <FontAwesomeIcon icon={faEye} />, label: 'Visualizing', url: '/visualize' },
     ],
   },
-  { icon: null, label: 'Log out', url: '/' }, // Log out doesn't need an icon
+  { icon: <FontAwesomeIcon icon={faUser} />, label: 'Profile', url: '/profile' },
+  { icon: null, label: 'Log out', url: '/' },
 ];
 
 const NavMenu: React.FC = () => {
@@ -40,36 +42,49 @@ const NavMenu: React.FC = () => {
     };
 
     const checkAuthToken = () => {
-      const authToken = document.cookie.includes('auth_token'); // Check for authentication token
-      setIsAuthenticated(authToken);
+      setLoading(true);
+      auth.onAuthStateChanged((user) => {
+        setIsAuthenticated(!!user); // Update authentication state
+        setLoading(false); // Remove loading state after auth check
+      });
     };
 
     window.addEventListener('scroll', handleScroll);
-    checkAuthToken(); // Run on component mount
+    checkAuthToken();
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleNavigation = async (url: string) => {
+  const handleLogout = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await signOut(auth); // Firebase sign out
+      setIsAuthenticated(false); // Clear authentication state
+      window.location.href = '/'; // Redirect to home after logout
+    } catch (err) {
+      console.error('Error logging out:', err);
+    } finally {
       setLoading(false);
-      window.location.href = url;
-    }, 500); // Simulated loading delay
+    }
   };
 
   const renderMenuItem = (item: any) => {
-    if (!isAuthenticated && item.url !== '/') {
-      // Lock menu items for unauthenticated users (except Logout)
+    if (!isAuthenticated && item.label === 'Profile') {
+      // Hide Profile option for unauthenticated users
+      return null;
+    }
+
+    if (item.label === 'Log out') {
+      // Add logout handling for Log out menu item
       return (
-        <div
+        <button
           key={item.label}
-          className="flex items-center space-x-1 text-gray-500 cursor-not-allowed"
-          title="Please log in to access"
+          onClick={handleLogout}
+          className="flex items-center space-x-1 text-gray-700 hover:text-lightlaven"
         >
           {item.icon && <span>{item.icon}</span>}
           <span>{item.label}</span>
-        </div>
+        </button>
       );
     }
 
@@ -119,7 +134,7 @@ const NavMenu: React.FC = () => {
     <div className="relative">
       {/* Loading Overlay */}
       {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
           <div className="text-white text-xl font-semibold animate-pulse">Loading...</div>
         </div>
       )}

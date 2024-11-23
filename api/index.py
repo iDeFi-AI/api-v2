@@ -17,16 +17,17 @@ import pandas as pd
 from flask_cors import CORS
 from io import BytesIO
 import requests
-from api.visualize_relationships import visualize_relationships, UNIQUE_DIR  
-from api.monitor_address import monitor_address
-from api.onchain_offchain import analyze_transactions, analyze_with_ai
-from api.data_metrics import calculate_metrics
-from api.v1basic_metrics import fetch_transactions, process_data
-from api.v2intermediate_metrics import generate_security_alerts, calculate_portfolio_health_score, calculate_tax_implications
-from api.v3advanced_metrics import analyze_defi_exposure, perform_onchain_analysis, analyze_tokenized_assets, generate_wealth_plan
-from api.address_checker import check_wallet_address, clean_and_validate_addresses
-from api.origins import check_addresses_with_origins
-import api.smart_contract_analyzer
+
+from api.tools.visualize_relationships import visualize_relationships, UNIQUE_DIR  
+from api.tools.monitor_address import monitor_address
+from api.tools.onchain_offchain import analyze_transactions, analyze_with_ai
+from api.tools.data_metrics import calculate_metrics
+from api.tools.v1basic_metrics import fetch_transactions, process_data
+from api.tools.v2intermediate_metrics import generate_security_alerts, calculate_portfolio_health_score, calculate_tax_implications
+from api.tools.v3advanced_metrics import analyze_defi_exposure, perform_onchain_analysis, analyze_tokenized_assets, generate_wealth_plan
+from api.tools.address_checker import check_wallet_address, clean_and_validate_addresses
+from api.tools.origins import check_addresses_with_origins
+import api.tools.smart_contract_analyzer
 
 load_dotenv()
 app = Flask(__name__)
@@ -298,21 +299,38 @@ def get_all_tokens():
     else:
         return jsonify({'tokens': []}), 200
 
-# Endpoint for generating API token
-@app.route('/api/generate_token', methods=['POST'])
-def generate_user_token():
+@app.route('/api/validate_user', methods=['POST'])
+def validate_user():
+    """
+    Validates the Firebase user by their ID token.
+    """
     try:
         data = request.json
-        uid = data.get('uid')
+        id_token = data.get('idToken')
+
+        if not id_token:
+            return jsonify({'error': 'ID token is required'}), 400
+
+        # Verify the token using Firebase Admin SDK
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token.get('uid')
+
         if not uid:
-            return jsonify({'error': 'UID required'}), 400
+            return jsonify({'error': 'UID not found in token'}), 400
 
-        custom_token = auth.create_custom_token(uid)
-        token = custom_token.decode('utf-8')
+        # Retrieve the user by UID
+        user = auth.get_user(uid)
 
-        return jsonify({'token': token}), 200
+        # Return the user's UID and email
+        return jsonify({
+            'uid': user.uid,
+            'email': user.email,
+            'email_verified': user.email_verified
+        }), 200
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'User validation failed', 'details': str(e)}), 401
+
 
 # Endpoint for getting API key
 @app.route('/api/get_api_key', methods=['GET'])

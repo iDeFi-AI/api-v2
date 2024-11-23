@@ -1,5 +1,5 @@
-from api.v1basic_metrics import fetch_transactions
-from api.v2intermediate_metrics import calculate_tax_implications
+from api.tools.v1basic_metrics import fetch_transactions
+from api.tools.v2intermediate_metrics import calculate_tax_implications
 
 # DeFi exposure analysis
 def analyze_defi_exposure(transactions):

@@ -3,7 +3,7 @@ import json
 import logging
 import datetime
 from flask import jsonify
-from api.etherscanv2 import get_etherscan_v2_details  # Import etherscanv2 utility functions
+from api.tools.etherscanv2 import get_etherscan_v2_details  # Import etherscanv2 utility functions
 
 # Path to local flagged.json file
 FLAGGED_JSON_PATH = os.path.join(os.path.dirname(__file__), 'unique', 'flagged.json')

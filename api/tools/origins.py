@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from api.etherscanv2 import get_etherscan_v2_details  # Importing from etherscanv2.py
+from api.tools.etherscanv2 import get_etherscan_v2_details  # Importing from etherscanv2.py
 
 # Path to the known origins JSON file
 KNOWN_ORIGINS_PATH = os.path.join(os.path.dirname(__file__), 'known_origins/contract_origins.json')

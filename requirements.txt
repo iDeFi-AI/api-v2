@@ -12,3 +12,4 @@ websockets>=10.0
 protobuf>=3.10.0,<4
 aiohttp==3.8.5
 tqdm==4.66.1
+PyJWT==2.6.0

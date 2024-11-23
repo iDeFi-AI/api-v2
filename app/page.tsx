@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { signInWithEmailPassword } from '@/utilities/firebaseClient';
 
 export default function Home() {
   const [hasAccount, setHasAccount] = useState(true); // Tracks if the user has an account
@@ -26,22 +27,45 @@ export default function Home() {
 
 /* Login Section */
 function LoginSection({ setHasAccount }: { setHasAccount: (value: boolean) => void }) {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const setAuthToken = (token: string) => {
+    document.cookie = `auth_token=${token}; path=/; max-age=${30 * 24 * 60 * 60}`; // 30 days
+  };
 
   const handleLogin = async () => {
     setLoading(true);
     setError('');
     try {
-      // Placeholder for login logic
-      console.log(`Logging in with username: ${username}, password: ${password}`);
-      // Redirect to the dashboard or API access area
+      // Firebase Authentication
+      const userCredential = await signInWithEmailPassword(email, password);
+
+      // Verify email and set user details
+      const idToken = await userCredential.user.getIdToken();
+      const response = await fetch('/api/validate_user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('User validation failed.');
+      }
+
+      const { uid, email: userEmail } = await response.json();
+
+      // Set user details in cookies
+      setAuthToken(idToken);
+      console.log(`User authenticated: ${uid}, ${userEmail}`);
+
+      // Redirect to '/devs'
       window.location.href = '/devs';
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error logging in:', err);
-      setError('Invalid username or password. Please try again.');
+      setError(err.message || 'Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -51,10 +75,10 @@ function LoginSection({ setHasAccount }: { setHasAccount: (value: boolean) => vo
     <div className="w-full">
       <form className="flex flex-col gap-4 mt-4" onSubmit={(e) => e.preventDefault()}>
         <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email Address"
           className="px-4 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring focus:ring-neorange bg-gray-700 text-white"
         />
         <input
@@ -105,7 +129,7 @@ function AccessRequestForm({ setHasAccount }: { setHasAccount: (value: boolean) 
         request and get back to you shortly.
       </p>
       <iframe
-        src="https://docs.google.com/forms/d/e/1FAIpQLSdH8hxby9a_uMKwQCsRnFbD3pivaoJjAhsZNiN9dSLYzMnyHg/viewform?embedded=true"
+        src="https://docs.google.com/forms/d/e/1FAIpQLScazJ2Bp-h7XlcE6RewIoL8mKlkg5wrP79fgLo7VI08-VP9jA/viewform?embedded=true"
         width="100%"
         height="500"
         frameBorder="0"

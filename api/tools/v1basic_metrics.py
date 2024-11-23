@@ -1,5 +1,5 @@
 import os
-from api.etherscanv2 import get_etherscan_v2_details
+from api.tools.etherscanv2 import get_etherscan_v2_details
 
 # Fetch transactions using Etherscan V2
 def fetch_transactions(address, chain='ethereum'):

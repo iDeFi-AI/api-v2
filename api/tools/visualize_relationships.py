@@ -10,7 +10,7 @@ from tqdm import tqdm
 import random
 import firebase_admin
 from firebase_admin import credentials, storage
-from api.etherscanv2 import get_etherscan_v2_details, CHAIN_API_BASE_URLS
+from api.tools.etherscanv2 import get_etherscan_v2_details, CHAIN_API_BASE_URLS
 
 # Setup logging
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from api.etherscanv2 import get_etherscan_v2_details
+from api.tools.etherscanv2 import get_etherscan_v2_details
 
 logger = logging.getLogger(__name__)
 
