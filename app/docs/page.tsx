@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/authContext';
-import { auth, database, ref, get } from '@/utilities/firebaseClient';
+import { auth, fetchApiKeys } from '@/utilities/firebaseClient';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import Link from 'next/link';
@@ -21,10 +21,9 @@ export default function Page() {
   ]);
 
   const [selectedNavItem, setSelectedNavItem] = useState<NavigationItem>(navigationItems[0]);
-
   const [{ apiKey: userApiKey }] = useAuth();
   const [apiKey, setApiKey] = useState<string>(userApiKey || '');
-  const [userToken, setUserToken] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
   const handleNavigationItemClick = (item: NavigationItem) => {
     setSelectedNavItem(item);
@@ -32,41 +31,25 @@ export default function Page() {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user && 'uid' in user) {
-        const uid = user.uid;
-        setUserToken(await fetchUserToken(uid));
-        setApiKey(await fetchApiKey(uid));
+      if (user) {
+        fetchUserApiKeys(user.uid);
       } else {
         setApiKey('');
-        setUserToken('');
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  const fetchUserToken = async (uid: string): Promise<string> => {
+  const fetchUserApiKeys = async (uid: string) => {
+    setLoading(true);
     try {
-      const snapshot = await get(ref(database, `users/${uid}/token`));
-      return snapshot.exists() ? snapshot.val() : '';
+      const keys = await fetchApiKeys(uid);
+      setApiKey(keys.length > 0 ? keys[0] : ''); // Use the first API key or set as empty
     } catch (error) {
-      console.error('Error fetching user token:', error);
-      return '';
-    }
-  };
-
-  const fetchApiKey = async (uid: string): Promise<string> => {
-    try {
-      const snapshot = await get(ref(database, `apiKeys/${uid}`));
-      const apiKeyValue: unknown = snapshot.exists() ? Object.values(snapshot.val())[0] : '';
-      if (typeof apiKeyValue === 'string') {
-        return apiKeyValue;
-      } else {
-        return '';
-      }
-    } catch (error) {
-      console.error('Error fetching API key:', error);
-      return '';
+      console.error('Error fetching API keys:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,10 +109,10 @@ export default function Page() {
             <h2 className="text-2xl font-bold mb-4">{selectedNavItem.label}</h2>
             <SyntaxHighlighter language="bash" style={docco}>
               {`curl -X POST \\
-              -H "Content-Type: application/json" \\
-              -d '{"addresses": ["ADDRESS_TO_CHECK"]}' \\
-              https://api.idefi.ai/api/checkaddress`}
-             </SyntaxHighlighter>
+-H "Content-Type: application/json" \\
+-d '{"addresses": ["ADDRESS_TO_CHECK"]}' \\
+https://api.idefi.ai/api/checkaddress`}
+            </SyntaxHighlighter>
           </div>
         );
       case 4:
@@ -161,7 +144,13 @@ export default function Page() {
           ))}
         </ul>
       </aside>
-      <section className="content flex-grow p-6">{renderContent()}</section>
+      <section className="content flex-grow p-6">
+        {loading ? (
+          <div className="text-center text-xl font-semibold">Loading...</div>
+        ) : (
+          renderContent()
+        )}
+      </section>
       <style jsx>{`
         @media (max-width: 768px) {
           aside {
