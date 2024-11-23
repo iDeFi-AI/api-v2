@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import ScoreTable from '@/components/ScoreTable';
 import { processAddressCheck, AddressCheckResult } from '@/utilities/GenAiFirewall';
-import { auth, database, ref, get, set } from '@/utilities/firebaseClient';
+import { auth, getData, storeData } from '@/utilities/firebaseClient';
 import { useAuth } from '@/components/authContext';
 import { TailSpin } from 'react-loader-spinner';
 import { getColorForStatus } from '@/utilities/colorMapping';
@@ -24,8 +24,9 @@ const FirewallPage: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [flaggedAddresses, setFlaggedAddresses] = useState<Set<string>>(new Set());
   const [selectedChain, setSelectedChain] = useState<string>('ethereum'); // Chain selector
-  const [{ apiKey: userApiKey }] = useAuth();
+  const [{apiKeys: userApiKey }] = useAuth();
 
+  // Fetch flagged addresses on component mount
   useEffect(() => {
     const fetchFlaggedAddresses = async () => {
       try {
@@ -43,6 +44,24 @@ const FirewallPage: React.FC = () => {
     };
 
     fetchFlaggedAddresses();
+  }, []);
+
+  // Fetch user upload history on authentication state change
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          const userHistory = await getData(`users/${user.uid}/upload_history`);
+          setHistory(userHistory || []);
+        } catch (error) {
+          console.error('Error fetching user history:', error);
+        }
+      } else {
+        setHistory([]);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleAddressCheck = async () => {
@@ -115,14 +134,13 @@ const FirewallPage: React.FC = () => {
       const user = auth.currentUser;
       if (user) {
         const uid = user.uid;
-        const historyRef = ref(database, `users/${uid}/upload_history`);
-        const snapshot = await get(historyRef);
-        const currentHistory = snapshot.exists() ? snapshot.val() : [];
+        const userHistoryPath = `users/${uid}/upload_history`;
+        const currentHistory = await getData(userHistoryPath) || [];
         const updatedHistory = [
           ...currentHistory,
           { fileUrl: data.file_url, timestamp: new Date().toISOString() },
         ];
-        await set(historyRef, updatedHistory);
+        await storeData(userHistoryPath, updatedHistory); // Save updated history
         setHistory(updatedHistory);
       }
     } catch (error) {
@@ -156,7 +174,7 @@ const FirewallPage: React.FC = () => {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white-900 via-white-800 to-white-700 text-white">
+    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white">
       <div className="max-w-3xl w-full bg-gray-800 p-6 rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold text-center text-neorange">Address Analysis</h1>
         <p className="text-sm text-center text-gray-300 mt-2 mb-4">

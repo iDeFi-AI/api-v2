@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { auth, fetchApiKeys, createApiKey, deleteApiKey } from '@/utilities/firebaseClient';
-import { useAuth } from '@/components/authContext';
 
 export default function DeveloperPortal() {
   const [loading, setLoading] = useState(false);

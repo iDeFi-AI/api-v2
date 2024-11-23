@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/authContext';
-import { auth, fetchApiKeys } from '@/utilities/firebaseClient';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import Link from 'next/link';
@@ -21,36 +20,20 @@ export default function Page() {
   ]);
 
   const [selectedNavItem, setSelectedNavItem] = useState<NavigationItem>(navigationItems[0]);
-  const [{ apiKey: userApiKey }] = useAuth();
-  const [apiKey, setApiKey] = useState<string>(userApiKey || '');
-  const [loading, setLoading] = useState(false);
+  const [{ apiKeys }] = useAuth(); // Destructure apiKeys from updated authContext
+  const [apiKey, setApiKey] = useState<string>('');
+
+  useEffect(() => {
+    // Use the first available API key from the array if available
+    if (apiKeys && apiKeys.length > 0) {
+      setApiKey(apiKeys[0]);
+    } else {
+      setApiKey('');
+    }
+  }, [apiKeys]);
 
   const handleNavigationItemClick = (item: NavigationItem) => {
     setSelectedNavItem(item);
-  };
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        fetchUserApiKeys(user.uid);
-      } else {
-        setApiKey('');
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const fetchUserApiKeys = async (uid: string) => {
-    setLoading(true);
-    try {
-      const keys = await fetchApiKeys(uid);
-      setApiKey(keys.length > 0 ? keys[0] : ''); // Use the first API key or set as empty
-    } catch (error) {
-      console.error('Error fetching API keys:', error);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const renderContent = () => {
@@ -72,6 +55,7 @@ export default function Page() {
                 <button
                   className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-md ml-2"
                   onClick={() => navigator.clipboard.writeText(apiKey)}
+                  disabled={!apiKey}
                 >
                   Copy
                 </button>
@@ -109,9 +93,9 @@ export default function Page() {
             <h2 className="text-2xl font-bold mb-4">{selectedNavItem.label}</h2>
             <SyntaxHighlighter language="bash" style={docco}>
               {`curl -X POST \\
--H "Content-Type: application/json" \\
--d '{"addresses": ["ADDRESS_TO_CHECK"]}' \\
-https://api.idefi.ai/api/checkaddress`}
+              -H "Content-Type: application/json" \\
+              -d '{"addresses": ["ADDRESS_TO_CHECK"]}' \\
+              https://api.idefi.ai/api/checkaddress`}
             </SyntaxHighlighter>
           </div>
         );
@@ -144,13 +128,7 @@ https://api.idefi.ai/api/checkaddress`}
           ))}
         </ul>
       </aside>
-      <section className="content flex-grow p-6">
-        {loading ? (
-          <div className="text-center text-xl font-semibold">Loading...</div>
-        ) : (
-          renderContent()
-        )}
-      </section>
+      <section className="content flex-grow p-6">{renderContent()}</section>
       <style jsx>{`
         @media (max-width: 768px) {
           aside {

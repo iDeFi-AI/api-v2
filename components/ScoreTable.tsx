@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { AddressCheckResult } from '@/utilities/GenAiFirewall';
-import { getColorForStatus } from '@/utilities/colorMapping'; // Function to map status to color
 
 interface ScoreTableProps {
   results: AddressCheckResult[];
