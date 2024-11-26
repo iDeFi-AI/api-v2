@@ -2,7 +2,9 @@ import os
 import json
 import logging
 import datetime
-from flask import jsonify
+import time
+import matplotlib.pyplot as plt
+from threading import Thread
 from api.tools.etherscanv2 import get_etherscan_v2_details  # Import etherscanv2 utility functions
 
 # Path to local flagged.json file
@@ -30,52 +32,86 @@ CHAIN_API_BASE_URLS = {
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Function to check for dusting patterns
-def check_dusting_patterns(wallet_address, chain='ethereum'):
+# Function to fetch transactions
+def fetch_transactions(wallet_address, chain='ethereum'):
     try:
-        transactions = get_etherscan_v2_details(wallet_address, chain=chain)
-        dusting_patterns = []
-
-        for tx in transactions:
-            value_eth = int(tx['value']) / 1e18
-            if 0 < value_eth < 0.001:
-                dusting_patterns.append({
-                    'transaction_hash': tx['hash'],
-                    'from': tx['from'],
-                    'to': tx['to'],
-                    'value': value_eth,
-                    'timestamp': datetime.datetime.fromtimestamp(int(tx['timeStamp'])).isoformat()
-                })
-
-        return dusting_patterns
+        return get_etherscan_v2_details(wallet_address, chain=chain, module="account", action="txlist").get('result', [])
     except Exception as e:
-        logger.error(f"Error checking dusting patterns: {e}")
+        logger.error(f"Error fetching transactions: {e}")
         return []
 
-# Function to provide recommendations based on dusting patterns
-def provide_dusting_recommendations(dusting_patterns):
-    if dusting_patterns:
-        return [
-            "Your wallet has been dusted. Avoid interacting with these transactions.",
-            "Consider transferring funds to a new wallet.",
-            "Enable additional security measures like hardware wallets."
-        ]
-    return ["No dusting patterns detected. Your wallet appears safe."]
+# Function to check for dusting patterns
+def check_dusting_patterns(wallet_address, transactions):
+    dusting_patterns = []
 
-# Main function to monitor address
+    for tx in transactions:
+        value_eth = int(tx['value']) / 1e18
+        if 0 < value_eth < 0.001:
+            dusting_patterns.append({
+                'transaction_hash': tx['hash'],
+                'from': tx['from'],
+                'to': tx['to'],
+                'value': value_eth,
+                'timestamp': datetime.datetime.fromtimestamp(int(tx['timeStamp'])).isoformat()
+            })
+
+    return dusting_patterns
+
+# Plot transactions on a graph
+def plot_transactions(transactions):
+    if not transactions:
+        return
+
+    timestamps = [datetime.datetime.fromtimestamp(int(tx['timeStamp'])) for tx in transactions]
+    values = [float(tx['value']) / 1e18 for tx in transactions]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(timestamps, values, marker='o', linestyle='-', color='b')
+    plt.title('Transaction History')
+    plt.xlabel('Time')
+    plt.ylabel('Transaction Value (ETH)')
+    plt.grid()
+    plt.tight_layout()
+    plt.pause(0.1)  # Interactive plot update
+
+# Monitor address for new transactions
 def monitor_address(wallet_address, chain='ethereum'):
+    known_transactions = set()
     try:
-        if not get_etherscan_v2_details(wallet_address, chain=chain):  # Use etherscanv2 utility for validation
-            return {'error': "Invalid Ethereum address or no data found."}
+        while True:
+            transactions = fetch_transactions(wallet_address, chain)
+            new_transactions = [tx for tx in transactions if tx['hash'] not in known_transactions]
 
-        dusting_patterns = check_dusting_patterns(wallet_address, chain)
-        recommendations = provide_dusting_recommendations(dusting_patterns)
+            if new_transactions:
+                known_transactions.update(tx['hash'] for tx in new_transactions)
+                logger.info(f"New transactions detected: {len(new_transactions)}")
+                plot_transactions(new_transactions)
 
-        return {
-            'dusting_patterns': dusting_patterns,
-            'recommendations': recommendations
-        }
+                # Summarize key metrics
+                total_sent = sum(float(tx['value']) / 1e18 for tx in transactions if tx['from'].lower() == wallet_address.lower())
+                total_received = sum(float(tx['value']) / 1e18 for tx in transactions if tx['to'].lower() == wallet_address.lower())
+
+                summary = {
+                    "Total ETH Sent": total_sent,
+                    "Total ETH Received": total_received,
+                    "Total Transactions": len(transactions),
+                    "New Transactions": len(new_transactions)
+                }
+                logger.info(f"Summary: {summary}")
+
+                # Detect dusting patterns
+                dusting_patterns = check_dusting_patterns(wallet_address, transactions)
+                if dusting_patterns:
+                    logger.warning(f"Dusting patterns detected: {dusting_patterns}")
+
+            time.sleep(10)  # Poll every 10 seconds
+    except KeyboardInterrupt:
+        logger.info("Monitoring stopped.")
     except Exception as e:
-        logger.error(f"Error monitoring address: {e}")
-        return {'error': str(e)}
+        logger.error(f"Error in monitoring: {e}")
 
+# Start monitoring in a thread
+def start_monitoring(wallet_address, chain='ethereum'):
+    thread = Thread(target=monitor_address, args=(wallet_address, chain))
+    thread.daemon = True
+    thread.start()

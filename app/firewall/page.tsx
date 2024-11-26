@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ScoreTable from '@/components/ScoreTable';
-import { processAddressCheck, AddressCheckResult } from '@/utilities/GenAiFirewall';
+import { processAddressCheck, AddressCheckResult } from '@/utilities/GenAi';
 import { auth, getData, storeData } from '@/utilities/firebaseClient';
 import { useAuth } from '@/components/authContext';
 import { TailSpin } from 'react-loader-spinner';

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Bar, Line, Radar } from 'react-chartjs-2';
 import { Chart as ChartJS, registerables } from 'chart.js';
-import { generateAddressCheckPrompt } from '@/utilities/GenAiFirewall';
+import { generateAddressCheckPrompt } from '@/utilities/GenAi';
 
 ChartJS.register(...registerables);
 

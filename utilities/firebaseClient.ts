@@ -28,7 +28,7 @@ const firebaseConfig = {
   projectId: "api-v2-idefi-ai",
   storageBucket: "api-v2-idefi-ai.appspot.com",
   messagingSenderId: "315219736110",
-  appId: "1:315219736110:web:818238ea513631abe4d1bf",
+  appId: "1:315219736110:web:818238ea513631abe4d1bf"
 };
 
 // Initialize Firebase

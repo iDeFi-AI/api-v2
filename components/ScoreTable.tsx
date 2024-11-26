@@ -1,195 +1,246 @@
-'use client';
+import React, { useEffect, useState } from "react";
 
-import React, { useState } from 'react';
-import { AddressCheckResult } from '@/utilities/GenAiFirewall';
+type TransactionType = "Sent" | "Received";
 
-interface ScoreTableProps {
-  results: AddressCheckResult[];
-  getColorForStatus: (status: 'PASS' | 'FAIL' | 'WARNING') => string; // Maps status to color
+interface Transaction {
+  id: string;
+  timestamp: string;
+  type: TransactionType;
+  cryptocurrency: string;
+  usdAmount: number;
+  thirdPartyWallet: string;
+  flagged: boolean;
+  risk: "High" | "Medium" | "Low" | "None";
 }
 
-const ScoreTable: React.FC<ScoreTableProps> = ({ results, getColorForStatus }) => {
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+interface TransactionSummary {
+  number_of_interactions_with_flagged_addresses: number;
+  number_of_risky_transactions: number;
+  total_value: number;
+  all_dates_involved: string[];
+}
 
-  // Toggle expanded rows to show more details
-  const toggleRow = (index: number) => {
-    const newExpandedRows = new Set(expandedRows);
-    if (newExpandedRows.has(index)) {
-      newExpandedRows.delete(index);
-    } else {
-      newExpandedRows.add(index);
-    }
-    setExpandedRows(newExpandedRows);
+interface AddressCheckResult {
+  address: string;
+  status: "PASS" | "FAIL" | "WARNING";
+  description?: string;
+}
+
+interface ScoreTableProps {
+  transactions?: Transaction[]; // Optional to support results-only input
+  results?: AddressCheckResult[]; // New support for results-based rendering
+  getColorForStatus?: (status: "PASS" | "FAIL" | "WARNING") => string; // Function for status coloring
+}
+
+const ScoreTable: React.FC<ScoreTableProps> = ({
+  transactions = [],
+  results = [],
+  getColorForStatus,
+}) => {
+  const [summary, setSummary] = useState<TransactionSummary | null>(null);
+  const [updatedTransactions, setUpdatedTransactions] = useState<Transaction[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const itemsPerPage = 10;
+
+  // Pagination logic for transactions
+  const paginatedTransactions = updatedTransactions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const totalPages = Math.ceil(updatedTransactions.length / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
-  // Shorten Ethereum addresses for better display
-  const shortenAddress = (address?: string): string => {
-    if (!address) return 'N/A'; // Handle cases where the address is missing or undefined
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
+  // Fetch transaction summaries only when transactions are provided
+  useEffect(() => {
+    if (transactions.length === 0) return;
 
-  // Render description with proper formatting and clickable Etherscan links
-  const renderDescription = (description: string) => {
+    const fetchSummaryData = async () => {
+      const primaryAddress = transactions[0].thirdPartyWallet;
+      const addresses = Array.from(new Set(transactions.map((tx) => tx.thirdPartyWallet)));
+
+      try {
+        setLoading(true);
+
+        const summaryResponse = await fetch(`/api/transaction_summary`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ address: primaryAddress }),
+        });
+
+        if (!summaryResponse.ok) {
+          throw new Error("Failed to fetch transaction summary.");
+        }
+
+        const summaryData: TransactionSummary = await summaryResponse.json();
+        setSummary(summaryData);
+
+        const checkResponse = await fetch(`/api/check_multiple_addresses`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ addresses }),
+        });
+
+        if (!checkResponse.ok) {
+          throw new Error("Failed to check multiple addresses.");
+        }
+
+        const checkResults: AddressCheckResult[] = await checkResponse.json();
+
+        const newTransactions = transactions.map((tx) => ({
+          ...tx,
+          flagged: checkResults.some(
+            (result) =>
+              result.address.toLowerCase() === tx.thirdPartyWallet.toLowerCase() &&
+              result.status === "FAIL"
+          ),
+        }));
+
+        setUpdatedTransactions(newTransactions);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error occurred.");
+        console.error("Error fetching data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSummaryData();
+  }, [transactions]);
+
+  const renderSummary = () => {
+    if (!summary) return null;
+
     return (
-      <div
-        dangerouslySetInnerHTML={{
-          __html: description
-            .replace(/\n/g, '<br />') // Replace newlines with <br />
-            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>') // Convert Markdown links to HTML links
-        }}
-      />
+      <div className="summary-card bg-white shadow-md rounded-lg p-6 mb-6">
+        <p className="text-lg">
+          <strong>Flagged Interactions:</strong>{" "}
+          {summary.number_of_interactions_with_flagged_addresses}
+        </p>
+        <p className="text-lg">
+          <strong>Risky Transactions:</strong> {summary.number_of_risky_transactions}
+        </p>
+        <p className="text-lg">
+          <strong>Total Value:</strong> ${summary.total_value.toFixed(2)}
+        </p>
+        <p className="text-lg">
+          <strong>Dates Involved:</strong> {summary.all_dates_involved.join(", ")}
+        </p>
+      </div>
     );
   };
 
-  // Download results as JSON
-  const handleDownloadResults = () => {
-    const jsonData = JSON.stringify(results, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'firewall_results.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const renderTransactions = () => {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full bg-white rounded-lg shadow-md">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="py-2 px-4 border-b">Date</th>
+              <th className="py-2 px-4 border-b">Type</th>
+              <th className="py-2 px-4 border-b">Amount</th>
+              <th className="py-2 px-4 border-b">Status</th>
+              <th className="py-2 px-4 border-b">Involved Address</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedTransactions.map((txn, index) => (
+              <tr
+                key={txn.id}
+                className={`text-center ${index % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
+              >
+                <td className="py-2 px-4 border-b">
+                  {new Date(txn.timestamp).toLocaleDateString()}
+                </td>
+                <td className="py-2 px-4 border-b">{txn.type}</td>
+                <td className="py-2 px-4 border-b">${txn.usdAmount.toFixed(2)}</td>
+                <td className="py-2 px-4 border-b">
+                  <span
+                    className={txn.flagged ? "text-red-500 font-bold" : "text-green-500 font-bold"}
+                  >
+                    {txn.flagged ? "Fail" : "Pass"}
+                  </span>
+                </td>
+                <td className="py-2 px-4 border-b">{txn.thirdPartyWallet}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="flex justify-center mt-4">
+          {[...Array(totalPages)].map((_, index) => (
+            <button
+              key={index}
+              onClick={() => handlePageChange(index + 1)}
+              className={`px-4 py-2 mx-1 ${
+                currentPage === index + 1
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 text-gray-700"
+              } rounded`}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
 
-  return (
-    <div className="score-table-container">
-      <h2>Firewall Address Results</h2>
-      <div className="table-responsive">
-        <div className="table-header">
-          <div className="table-cell">Address</div>
-          <div className="table-cell">Status</div>
-        </div>
-        {results.map((result, index) => (
-          <div key={index} className="table-row" onClick={() => toggleRow(index)}>
-            <div className="table-cell">
-              <span className="wallet-address">{shortenAddress(result.address)}</span>
-            </div>
-            <div className={`table-cell ${getColorForStatus(result.status)}`}>
-              {result.status} {/* Directly using backend status */}
-            </div>
-            {expandedRows.has(index) && (
-              <div className="expanded-content">
-                <p><strong>Description:</strong> {renderDescription(result.description)}</p>
-                {result.transactionHash && <p><strong>Transaction Hash:</strong> {result.transactionHash}</p>}
-                {result.from && <p><strong>From:</strong> {result.from}</p>}
-                {result.to && <p><strong>To:</strong> {result.to}</p>}
-                {result.parentTxnHash && <p><strong>Parent Txn Hash:</strong> {result.parentTxnHash}</p>}
-                {result.etherscanUrl && (
-                  <p>
-                    <strong>Etherscan URL:</strong>{' '}
-                    <a href={result.etherscanUrl} target="_blank" rel="noopener noreferrer" className="etherscan-link">
-                      Open Link
-                    </a>
-                  </p>
-                )}
-                {result.insights && (
-                  <div className="insights">
-                    <p><strong>Insights:</strong></p>
-                    <pre>{JSON.stringify(result.insights, null, 2)}</pre>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+  const renderResults = () => {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full bg-white rounded-lg shadow-md">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="py-2 px-4 border-b">Address</th>
+              <th className="py-2 px-4 border-b">Status</th>
+              <th className="py-2 px-4 border-b">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {results.map((result, index) => (
+              <tr
+                key={result.address}
+                className={`text-center ${index % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
+              >
+                <td className="py-2 px-4 border-b">{result.address}</td>
+                <td
+                  className={`py-2 px-4 border-b ${
+                    getColorForStatus ? getColorForStatus(result.status) : ""
+                  }`}
+                >
+                  {result.status}
+                </td>
+                <td className="py-2 px-4 border-b">
+                  {result.description || "No description provided"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <button className="download-button" onClick={handleDownloadResults}>
-        Download Full Results.json
-      </button>
-      <style jsx>{`
-        .score-table-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin-top: 20px;
-          padding: 0 20px;
-          width: 100%;
-        }
-        .table-responsive {
-          width: 100%;
-        }
-        .table-header, .table-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 10px;
-          border: 1px solid #ccc;
-          cursor: pointer;
-          transition: background-color 0.3s ease;
-          flex-wrap: wrap;
-        }
-        .table-header {
-          background-color: #f8f9fa;
-          color: #000;
-          font-weight: bold;
-        }
-        .table-cell {
-          flex: 1;
-          text-align: left;
-          padding: 0 10px;
-          min-width: 120px;
-          word-wrap: break-word;
-        }
-        .wallet-address {
-          font-weight: bold;
-          font-size: 14px;
-          margin-bottom: 5px;
-          overflow: hidden;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          width: 100%;
-        }
-        .green {
-          color: green;
-        }
-        .red {
-          color: red;
-        }
-        .yellow {
-          color: #FDDA0D;
-        }
-        .expanded-content {
-          padding: 10px;
-          border-top: 1px solid #ccc;
-          width: 100%;
-          word-wrap: break-word;
-        }
-        .insights {
-          margin-top: 10px;
-        }
-        .etherscan-link {
-          color: #913d88;
-          text-decoration: none;
-        }
-        .etherscan-link:hover {
-          color: #6f1d6b;
-        }
-        .download-button {
-          margin-top: 20px;
-          background-color: #28a745;
-          color: white;
-          padding: 10px 20px;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-        .download-button:hover {
-          background-color: #218838;
-        }
-        @media (max-width: 600px) {
-          .wallet-address {
-            font-size: 12px;
-          }
-          .table-cell {
-            padding: 5px;
-          }
-          .expanded-content {
-            padding: 5px;
-          }
-        }
-      `}</style>
+    );
+  };
+
+  if (loading) {
+    return <div className="text-center">Loading...</div>;
+  }
+
+  return (
+    <div className="score-transactions w-full max-w-lg mx-auto my-4">
+      <h2 className="text-2xl font-bold mb-4 text-center">Transaction History</h2>
+      {error && <p className="text-red-500">{error}</p>}
+      {renderSummary()}
+      {transactions.length > 0 ? renderTransactions() : renderResults()}
     </div>
   );
 };

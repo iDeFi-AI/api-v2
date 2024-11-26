@@ -20,11 +20,10 @@ export default function Page() {
   ]);
 
   const [selectedNavItem, setSelectedNavItem] = useState<NavigationItem>(navigationItems[0]);
-  const [{ apiKeys }] = useAuth(); // Destructure apiKeys from updated authContext
+  const [{ apiKeys }] = useAuth();
   const [apiKey, setApiKey] = useState<string>('');
 
   useEffect(() => {
-    // Use the first available API key from the array if available
     if (apiKeys && apiKeys.length > 0) {
       setApiKey(apiKeys[0]);
     } else {
@@ -48,21 +47,24 @@ export default function Page() {
               <div className="flex items-center border border-gray-400 rounded-md p-2 mb-2 bg-gray-700">
                 <input
                   type="text"
-                  className="flex-grow bg-transparent outline-none text-white"
+                  className="flex-grow bg-transparent outline-none text-white text-sm sm:text-base"
                   value={apiKey}
                   readOnly
+                  placeholder="No API Key Available"
                 />
                 <button
-                  className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-md ml-2"
+                  className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 text-xs sm:text-sm rounded-md ml-2"
                   onClick={() => navigator.clipboard.writeText(apiKey)}
                   disabled={!apiKey}
                 >
                   Copy
                 </button>
               </div>
-              <p>If you don’t see an API Key, visit the Developer Portal to manage keys.</p>
+              <p className="text-sm sm:text-base">
+                If you don’t see an API Key, visit the Developer Portal to manage keys.
+              </p>
               <Link href="/devs">
-                <button className="bg-neorange hover:bg-orange-600 text-white py-2 px-4 rounded mt-4">
+                <button className="bg-neorange hover:bg-orange-600 text-white py-2 px-4 text-sm rounded mt-4">
                   Developer Portal
                 </button>
               </Link>
@@ -74,7 +76,7 @@ export default function Page() {
           <div>
             <h2 className="text-2xl font-bold mb-4">{selectedNavItem.label}</h2>
             <p>Descriptions of the available API endpoints:</p>
-            <ul className="list-disc ml-6 mt-4">
+            <ul className="list-disc ml-6 mt-4 text-sm sm:text-base">
               <li>
                 <strong>/api/checkaddress</strong> - Check the status of a wallet address.
               </li>
@@ -104,6 +106,18 @@ export default function Page() {
           <div>
             <h2 className="text-2xl font-bold mb-4">{selectedNavItem.label}</h2>
             <p>Find answers to frequently asked questions about our API.</p>
+            <ul className="list-disc pl-6 mt-4 text-sm sm:text-base space-y-2">
+              <li>
+                <strong>What is the purpose of the API?</strong> Our API enables seamless integration with blockchain
+                networks and enhanced transaction analysis tools.
+              </li>
+              <li>
+                <strong>How do I reset my API key?</strong> Visit the Developer Portal and navigate to "API Keys" to reset or regenerate a key.
+              </li>
+              <li>
+                <strong>Can I check multiple addresses simultaneously?</strong> Yes, use the <code>/api/check_multiple_addresses</code> endpoint.
+              </li>
+            </ul>
           </div>
         );
       default:
@@ -112,14 +126,16 @@ export default function Page() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col md:flex-row bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white">
-      <aside className="sidebar w-full md:w-64 bg-gray-800 text-white p-6">
-        <ul>
+    <main className="flex flex-col md:flex-row min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white">
+      <aside className="w-full md:w-64 bg-gray-800 p-4 md:p-6 sticky top-0 z-10">
+        <ul className="space-y-2">
           {navigationItems.map((item) => (
             <li
               key={item.id}
+              tabIndex={0}
               onClick={() => handleNavigationItemClick(item)}
-              className={`p-4 mb-2 rounded cursor-pointer ${
+              onKeyDown={(e) => e.key === 'Enter' && handleNavigationItemClick(item)}
+              className={`p-4 rounded-md text-center cursor-pointer ${
                 selectedNavItem.id === item.id ? 'bg-neorange' : 'hover:bg-gray-700'
               }`}
             >
@@ -128,20 +144,20 @@ export default function Page() {
           ))}
         </ul>
       </aside>
-      <section className="content flex-grow p-6">{renderContent()}</section>
+      <section className="flex-grow p-4 md:p-6">{renderContent()}</section>
       <style jsx>{`
         @media (max-width: 768px) {
           aside {
             width: 100%;
-            position: relative;
+            position: sticky;
+            top: 0;
           }
           section {
             margin-top: 1rem;
           }
         }
-        .sidebar ul {
-          list-style-type: none;
-          padding: 0;
+        input::placeholder {
+          color: #888;
         }
       `}</style>
     </main>

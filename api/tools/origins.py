@@ -102,9 +102,3 @@ def fetch_etherscan_v2_info(address, chain):
         logging.error(f"Error fetching Etherscan info for address {address} on chain {chain}: {e}")
         return None
 
-# Example usage for debugging
-if __name__ == "__main__":
-    example_addresses = ["0xYourAddress1", "0xYourAddress2"]
-    chain = "ethereum"  # Change chain as needed
-    results = check_addresses_with_origins(example_addresses, chain=chain)
-    print(json.dumps(results, indent=4))

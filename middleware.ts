@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Backend API endpoint for user validation
 const BACKEND_API_VALIDATE_USER_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/validate_user`;
 
 const protectedRoutes = [
@@ -15,13 +14,31 @@ const protectedRoutes = [
   '/visualize',
   '/devs',
   '/docs',
+  '/mini-app',
+  '/mini-appv2'
 ];
 
-export async function middleware(request: NextRequest) {
-  const authTokenCookie = request.cookies.get('auth_token'); // Retrieve auth_token from cookies
-  const authToken = authTokenCookie?.value;
+// In-memory cache for validated tokens
+const tokenCache = new Map<string, { uid: string; email: string; expiry: number }>();
 
-  console.log('Middleware authToken:', authToken); // Debugging log
+// Helper function to validate token locally
+const isTokenCached = (token: string) => {
+  const cachedEntry = tokenCache.get(token);
+  if (!cachedEntry) return false;
+
+  const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+  if (cachedEntry.expiry && cachedEntry.expiry > currentTime) {
+    return cachedEntry;
+  }
+
+  // Remove expired token
+  tokenCache.delete(token);
+  return false;
+};
+
+export async function middleware(request: NextRequest) {
+  const authTokenCookie = request.cookies.get('auth_token');
+  const authToken = authTokenCookie?.value;
 
   if (protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {
     if (!authToken) {
@@ -29,8 +46,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/not-authorized', request.url));
     }
 
+    // Check if the token is already validated in the cache
+    const cachedUser = isTokenCached(authToken);
+    if (cachedUser) {
+      console.log('Token validated from cache:', cachedUser);
+      // Attach user info to the headers
+      request.headers.set('X-User-UID', cachedUser.uid);
+      request.headers.set('X-User-Email', cachedUser.email);
+      return NextResponse.next();
+    }
+
+    // If not cached, validate with the backend
     try {
-      // Validate the user by sending the token to the backend API
       const response = await fetch(BACKEND_API_VALIDATE_USER_URL, {
         method: 'POST',
         headers: {
@@ -48,11 +75,14 @@ export async function middleware(request: NextRequest) {
       const validatedUser = await response.json();
       console.log('Validated User:', validatedUser);
 
-      // Attach validated user info to the request if needed
+      // Store validated token in the cache
+      const expiry = validatedUser.exp || Math.floor(Date.now() / 1000) + 15 * 60; // Default 15 mins
+      tokenCache.set(authToken, { uid: validatedUser.uid, email: validatedUser.email, expiry });
+
+      // Attach user info to the headers
       request.headers.set('X-User-UID', validatedUser.uid);
       request.headers.set('X-User-Email', validatedUser.email);
 
-      // Allow access if the user is valid
       return NextResponse.next();
     } catch (error) {
       console.error('User validation failed:', error);
@@ -60,7 +90,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Allow requests to non-protected routes
   return NextResponse.next();
 }
 

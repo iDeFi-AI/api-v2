@@ -4,9 +4,16 @@ import { Bars3Icon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outli
 import NextImage from 'next/image';
 import Link from 'next/link';
 import LogoImage from '@/public/shortV2.png';
-import HeaderNavLink from './HeaderNavLink';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileCode, faFlaskVial, faBook, faShieldAlt, faCogs, faDatabase, faEye, faUser } from '@fortawesome/free-solid-svg-icons';
+import {
+  faFileCode,
+  faFlaskVial,
+  faBook,
+  faShieldAlt,
+  faCogs,
+  faDatabase,
+  faEye,
+} from '@fortawesome/free-solid-svg-icons';
 import { auth } from '@/utilities/firebaseClient';
 import { signOut } from 'firebase/auth';
 
@@ -27,6 +34,14 @@ const menuItems = [
       { icon: <FontAwesomeIcon icon={faEye} />, label: 'Visualizing', url: '/visualize' },
     ],
   },
+  {
+    icon: <FontAwesomeIcon icon={faFlaskVial} />,
+    label: 'Mini Apps',
+    children: [
+      { icon: <FontAwesomeIcon icon={faEye} />, label: 'V1 ', url: '/mini-app' },
+      { icon: <FontAwesomeIcon icon={faCogs} />, label: 'V2', url: '/mini-appv2' },
+    ],
+  },
   { icon: null, label: 'Log out', url: '/' },
 ];
 
@@ -34,6 +49,8 @@ const NavMenu: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownTimeout, setDropdownTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,6 +89,21 @@ const NavMenu: React.FC = () => {
     window.location.href = url;
   };
 
+  const handleMouseEnter = (label: string) => {
+    if (dropdownTimeout) {
+      clearTimeout(dropdownTimeout);
+      setDropdownTimeout(null);
+    }
+    setOpenDropdown(label);
+  };
+
+  const handleMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setOpenDropdown(null);
+    }, 300); // Delay before closing dropdown
+    setDropdownTimeout(timeout);
+  };
+
   const renderMenuItem = (item: any) => {
     if (!isAuthenticated && item.label === 'Profile') {
       return null;
@@ -82,7 +114,7 @@ const NavMenu: React.FC = () => {
         <button
           key={item.label}
           onClick={handleLogout}
-          className="flex items-center space-x-1 text-gray-700 hover:text-lightlaven"
+          className="flex items-center space-x-1 text-gray-700 hover:text-neorange"
         >
           {item.icon && <span>{item.icon}</span>}
           <span>{item.label}</span>
@@ -91,33 +123,43 @@ const NavMenu: React.FC = () => {
     }
 
     if (item.children) {
+      const isOpen = openDropdown === item.label;
+
       return (
-        <div className="relative" key={item.label}>
-          <Disclosure>
-            {({ open }) => (
-              <>
-                <Disclosure.Button className="inline-flex items-center space-x-1 text-gray-700 hover:text-lightlaven">
-                  {item.icon && <span>{item.icon}</span>}
-                  <span className="text-sm font-medium">{item.label}</span>
-                  <ChevronDownIcon className={`h-5 w-5 transform ${open ? 'rotate-180' : 'rotate-0'}`} />
-                </Disclosure.Button>
-                <Disclosure.Panel className="absolute mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
-                  <div className="py-1">
-                    {item.children.map((subItem: any) => (
-                      <button
-                        key={subItem.label}
-                        onClick={() => handleNavigation(subItem.url)}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-lightlaven w-full text-left"
-                      >
-                        {subItem.icon && <span>{subItem.icon}</span>}
-                        <span>{subItem.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </Disclosure.Panel>
-              </>
-            )}
-          </Disclosure>
+        <div
+          className="relative group"
+          key={item.label}
+          onMouseEnter={() => handleMouseEnter(item.label)}
+          onMouseLeave={handleMouseLeave}
+        >
+          <button className="inline-flex items-center space-x-1 text-gray-700 hover:text-neorange">
+            {item.icon && <span>{item.icon}</span>}
+            <span>{item.label}</span>
+            <ChevronDownIcon
+              className={`h-5 w-5 transform transition-transform ${
+                isOpen ? 'rotate-180' : 'rotate-0'
+              }`}
+            />
+          </button>
+          <div
+            className={`absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg z-[1000] transition-opacity duration-300 ${
+              isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+            }`}
+          >
+            <ul className="py-1">
+              {item.children.map((subItem: any) => (
+                <li key={subItem.label}>
+                  <button
+                    onClick={() => handleNavigation(subItem.url)}
+                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-neorange w-full text-left"
+                  >
+                    {subItem.icon && <span>{subItem.icon}</span>}
+                    <span>{subItem.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       );
     }
@@ -126,7 +168,7 @@ const NavMenu: React.FC = () => {
       <button
         key={item.label}
         onClick={() => handleNavigation(item.url)}
-        className="flex items-center space-x-1 text-gray-700 hover:text-lightlaven"
+        className="flex items-center space-x-1 text-gray-700 hover:text-neorange"
       >
         {item.icon && <span>{item.icon}</span>}
         <span>{item.label}</span>
@@ -135,43 +177,35 @@ const NavMenu: React.FC = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative z-[1000]">
       {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+        <div className="fixed inset-0 z-[1500] flex items-center justify-center bg-black bg-opacity-75">
           <div className="text-white text-xl font-semibold animate-pulse">Loading...</div>
         </div>
       )}
 
-      <Disclosure as="nav" className={`bg-white shadow ${isScrolled ? 'sticky-header' : ''}`}>
+      <Disclosure as="nav" className={`bg-white shadow ${isScrolled ? 'sticky top-0 z-[1000]' : ''}`}>
         {({ open }) => (
           <>
-            <div className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
-              <div className="flex h-16 justify-between">
-                <div className="flex px-2 lg:px-0">
-                  <div className="flex flex-shrink-0 items-center">
-                    <Link href="/">
-                      <NextImage className="h-8 w-auto" src={LogoImage} alt="Logo" width={210} height={125} />
-                    </Link>
-                  </div>
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="flex h-16 justify-between items-center">
+                <div className="flex items-center">
+                  <Link href="/">
+                    <NextImage className="h-8 w-auto" src={LogoImage} alt="Logo" width={210} height={125} />
+                  </Link>
                 </div>
-                <div className="hidden lg:flex lg:space-x-8">{menuItems.map(renderMenuItem)}</div>
-                <div className="flex items-center lg:hidden">
-                  <Disclosure.Button className="relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-lightlaven">
+                <div className="hidden lg:flex space-x-8">{menuItems.map(renderMenuItem)}</div>
+                <div className="flex lg:hidden">
+                  <Disclosure.Button className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500">
                     <span className="sr-only">Open main menu</span>
-                    {open ? (
-                      <XMarkIcon className="block h-6 w-6" aria-hidden="true" />
-                    ) : (
-                      <Bars3Icon className="block h-6 w-6" aria-hidden="true" />
-                    )}
+                    {open ? <XMarkIcon className="h-6 w-6" aria-hidden="true" /> : <Bars3Icon className="h-6 w-6" aria-hidden="true" />}
                   </Disclosure.Button>
                 </div>
               </div>
             </div>
 
             <Disclosure.Panel className="lg:hidden">
-              <div className="flex flex-col items-center space-y-2 py-3">
-                {menuItems.map(renderMenuItem)}
-              </div>
+              <div className="space-y-2 py-3 px-2 sm:px-3">{menuItems.map(renderMenuItem)}</div>
             </Disclosure.Panel>
           </>
         )}

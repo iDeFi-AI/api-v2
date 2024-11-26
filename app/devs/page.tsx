@@ -97,21 +97,21 @@ export default function DeveloperPortal() {
         {userUid && (
           <div className="mb-6">
             <h2 className="text-xl text-neorange font-bold mb-4">Your User ID (UID)</h2>
-            <div className="flex items-center bg-gray-700 rounded-md p-4">
+            <div className="flex items-center border border-gray-400 rounded-md p-2 mb-4 bg-gray-700">
               <input
                 type="text"
-                className="flex-grow bg-transparent text-white border-none outline-none"
+                className="flex-grow bg-transparent text-white text-sm sm:text-base outline-none"
                 value={userUid}
                 readOnly
               />
               <button
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-md text-white transition ml-4"
+                className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 text-xs sm:text-sm rounded-md ml-2"
                 onClick={() => copyToClipboard(userUid)}
               >
                 Copy
               </button>
             </div>
-            <p className="text-sm text-gray-400 mt-4">
+            <p className="text-sm sm:text-base text-gray-400">
               Your access token is securely managed by iDEFi.AI.
             </p>
           </div>
@@ -122,21 +122,21 @@ export default function DeveloperPortal() {
           <h2 className="text-xl text-neorange font-bold mb-4">Your API Keys</h2>
           {userApiKeys.length > 0 ? (
             userApiKeys.map((key, index) => (
-              <div key={index} className="flex items-center bg-gray-700 rounded-md p-4 mb-4">
+              <div key={index} className="flex items-center border border-gray-400 rounded-md p-2 mb-4 bg-gray-700">
                 <input
                   type="text"
-                  className="flex-grow bg-transparent text-white border-none outline-none"
+                  className="flex-grow bg-transparent text-white text-sm sm:text-base outline-none"
                   value={key}
                   readOnly
                 />
                 <button
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-md text-white transition ml-4"
+                  className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 text-xs sm:text-sm rounded-md ml-2"
                   onClick={() => copyToClipboard(key)}
                 >
                   Copy
                 </button>
                 <button
-                  className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-md text-white transition ml-4"
+                  className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 text-xs sm:text-sm rounded-md ml-2"
                   onClick={() => handleDeleteApiKey(key)}
                   disabled={loading}
                 >
@@ -145,14 +145,14 @@ export default function DeveloperPortal() {
               </div>
             ))
           ) : (
-            <p className="text-gray-400">No API keys available.</p>
+            <p className="text-gray-400 text-sm sm:text-base">No API keys available.</p>
           )}
           {error && <p className="text-red-500 mt-4">{error}</p>}
         </div>
 
         {/* Generate API Key Button */}
         <button
-          className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-md text-white transition w-full md:w-auto"
+          className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-md text-white transition w-full sm:w-auto"
           onClick={handleGenerateApiKey}
           disabled={loading}
         >

@@ -21,7 +21,7 @@ import requests
 from api.tools.visualize_relationships import visualize_relationships, UNIQUE_DIR  
 from api.tools.monitor_address import monitor_address
 from api.tools.onchain_offchain import analyze_transactions, analyze_with_ai
-from api.tools.data_metrics import calculate_metrics
+from api.tools.data_metrics import calculate_metrics_and_forensics
 from api.tools.v1basic_metrics import fetch_transactions, process_data
 from api.tools.v2intermediate_metrics import generate_security_alerts, calculate_portfolio_health_score, calculate_tax_implications
 from api.tools.v3advanced_metrics import analyze_defi_exposure, perform_onchain_analysis, analyze_tokenized_assets, generate_wealth_plan
@@ -31,7 +31,7 @@ import api.tools.smart_contract_analyzer
 
 load_dotenv()
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["https://api.idefi.ai", "https://idefi-ai-api.vercel.app", "https://q.idefi.ai", "https://mup-nine.vercel.app", "http://localhost:3000", "https://agents.idefi.ai"]}})
+CORS(app, resources={r"/api/*": {"origins": ["https://api.idefi.ai", "https://api-v2.idefi.ai","https://q.idefi.ai", "http://localhost:3000", "https://agents.idefi.ai"]}})
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -50,8 +50,8 @@ try:
     firebase_service_account_key_dict = json.loads(firebase_service_account_key_str)
     cred = credentials.Certificate(firebase_service_account_key_dict)
     initialize_app(cred, {
-        'databaseURL': 'https://api-idefi-ai-default-rtdb.firebaseio.com/',
-        'storageBucket': 'api-idefi-ai.appspot.com'
+        'databaseURL': 'https://api-v2-idefi-ai-default-rtdb.firebaseio.com/',
+        'storageBucket': 'api-v2-idefi-ai.firebasestorage.app'
     })
     logger.debug("Firebase Admin SDK initialized successfully.")
 except json.JSONDecodeError as e:
@@ -428,6 +428,24 @@ def visualize_dataset():
 
     except Exception as e:
         logger.error(f"Error during visualization: {str(e)}")
+        return jsonify({'error': f"An error occurred: {str(e)}"}), 500
+
+@app.route('/api/visualize_risk', methods=['POST'])
+def visualize_risk_endpoint():
+    data = request.json
+    address = data.get('address', None)
+    chain = data.get('chain', 'ethereum')
+
+    if not address:
+        return jsonify({'error': 'An Ethereum address is required'}), 400
+
+    try:
+        logger.info(f"Visualizing risk for address: {address}")
+        visualization_url = visualize_risk(address=address, chain=chain)
+        return jsonify({'visualization_url': visualization_url})
+
+    except Exception as e:
+        logger.error(f"Error during risk visualization: {str(e)}")
         return jsonify({'error': f"An error occurred: {str(e)}"}), 500
 
 
