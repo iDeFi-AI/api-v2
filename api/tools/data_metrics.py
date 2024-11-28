@@ -2,23 +2,23 @@ import logging
 from datetime import datetime
 from collections import defaultdict
 import json
-from api.tools.etherscanv2 import get_etherscan_v2_details
+from api.tools.etherscanv2 import get_transaction_data
 
 logger = logging.getLogger(__name__)
 
 # Fetch transactions using etherscanv2.py
 def fetch_transactions(address, chain='ethereum'):
-    response = get_etherscan_v2_details(address, chain=chain, module="account", action="txlist")
+    response = get_transaction_data(address, chain=chain, module="account", action="txlist")
     return response.get('result', [])
 
 # Fetch internal transactions using etherscanv2.py
 def fetch_internal_transactions(address, chain='ethereum'):
-    response = get_etherscan_v2_details(address, chain=chain, module="account", action="txlistinternal")
+    response = get_transaction_data(address, chain=chain, module="account", action="txlistinternal")
     return response.get('result', [])
 
 # Fetch token transfers using etherscanv2.py
 def fetch_token_transfers(address, chain='ethereum'):
-    response = get_etherscan_v2_details(address, chain=chain, module="account", action="tokentx")
+    response = get_transaction_data(address, chain=chain, module="account", action="tokentx")
     return response.get('result', [])
 
 # Calculate metrics and forensic data

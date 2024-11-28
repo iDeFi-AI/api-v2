@@ -1,14 +1,14 @@
 import os
-from api.tools.etherscanv2 import get_etherscan_v2_details
+from api.tools.etherscanv2 import get_transaction_data
 
 # Fetch transactions using Etherscan V2
 def fetch_transactions(address, chain='ethereum'):
-    response = get_etherscan_v2_details(address, chain=chain, module="account", action="txlist")
+    response = get_transaction_data(address, chain=chain, module="account", action="txlist")
     return response.get('transactions', [])
 
 # Fetch token transfers using Etherscan V2
 def fetch_token_transfers(address, chain='ethereum'):
-    response = get_etherscan_v2_details(address, chain=chain, module="account", action="tokentx")
+    response = get_transaction_data(address, chain=chain, module="account", action="tokentx")
     return response.get('result', [])
 
 # Calculate basic metrics

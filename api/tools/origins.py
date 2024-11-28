@@ -1,104 +1,104 @@
+from flask import Blueprint, request, jsonify
 import os
 import json
+import asyncio
 import logging
-from api.tools.etherscanv2 import get_etherscan_v2_details  # Importing from etherscanv2.py
+from api.tools.etherscanv2 import get_transaction_data, is_valid_ethereum_address
 
-# Path to the known origins JSON file
+# Create Blueprint
+origins = Blueprint('origins', __name__)
+
+# Path to known origins JSON file
 KNOWN_ORIGINS_PATH = os.path.join(os.path.dirname(__file__), 'known_origins/contract_origins.json')
 
-# Load logging configuration
-logging.basicConfig(level=logging.INFO)
+# Supported chains
+SUPPORTED_CHAINS = ["ethereum", "base", "bsc", "polygon", "arbitrum", "optimism"]
 
-# Function to load known origins from a JSON file
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Load known origins
 def load_known_origins():
-    """
-    Load the locally stored known origins from a JSON file.
-    """
+    """Load known origins from a JSON file."""
     try:
         with open(KNOWN_ORIGINS_PATH, 'r') as f:
             known_origins = json.load(f)
+        logger.info("Loaded known origins successfully.")
         return known_origins
+    except FileNotFoundError:
+        logger.error(f"Known origins file not found: {KNOWN_ORIGINS_PATH}")
+        return []
+    except json.JSONDecodeError as e:
+        logger.error(f"Error decoding JSON from {KNOWN_ORIGINS_PATH}: {e}")
+        return []
     except Exception as e:
-        logging.error(f"Error loading known origins: {e}")
+        logger.error(f"Unexpected error loading known origins: {e}")
         return []
 
-# Function to check addresses against known origins and fetch details from Etherscan
-def check_addresses_with_origins(addresses, chain='ethereum'):
-    """
-    Check addresses against known origins and fetch details from Etherscan if needed.
+# Fetch chain data for a single address
+async def fetch_chain_data(address, chain):
+    """Fetch transaction data for an address on a specific chain."""
+    try:
+        transactions = await get_transaction_data(address, chains=[chain])
+        if transactions and isinstance(transactions, list):
+            chain_result = transactions[0]  # Get the first result for the chain
+            return {
+                "status": "MATCH_FOUND_ON_ETHERSCAN",
+                "etherscan_info": {
+                    "transaction_count": len(chain_result["transactions"]),
+                    "transactions": chain_result["transactions"][:5],  # Limit to 5 transactions
+                },
+            }
+    except Exception as e:
+        logger.error(f"Error fetching data for {address} on {chain}: {e}")
+    return {"status": "NO_MATCH"}
 
-    Args:
-        addresses (list): List of Ethereum addresses to check.
-        chain (str): Blockchain chain to use for Etherscan queries (default: 'ethereum').
+# Match an address with known origins
+def match_known_origins(address, known_origins):
+    """Match a wallet address with known origins."""
+    matches = []
+    for origin in known_origins:
+        if address.lower() == origin.get("address", "").lower():
+            matches.append({
+                "name": origin.get("name", "Unknown"),
+                "type": origin.get("type", "Unknown"),
+                "address": origin.get("address"),
+            })
+    return matches
 
-    Returns:
-        list: List of results for each address.
-    """
+# Asynchronously process addresses
+async def process_addresses(addresses):
+    """Process multiple addresses and fetch transaction data."""
     known_origins = load_known_origins()
     results = []
 
     for address in addresses:
-        # Normalize address to lowercase for comparison
-        address_lower = address.lower()
-        matches = []
+        if not is_valid_ethereum_address(address):
+            logger.warning(f"Invalid Ethereum address: {address}")
+            results.append({"address": address, "status": "INVALID_ADDRESS"})
+            continue
 
-        # Check if the given address matches any locally stored origin addresses
-        for origin in known_origins:
-            origin_address = origin['address'].lower()
-            if address_lower == origin_address:
-                matches.append({
-                    "name": origin['name'],
-                    "type": origin['type'],
-                    "address": origin_address
+        result = {"address": address, "known_origins": [], "chains": []}
+
+        # Match with known origins
+        result["known_origins"] = match_known_origins(address, known_origins)
+
+        # Fetch chain data concurrently for supported chains
+        chain_results = await asyncio.gather(
+            *[fetch_chain_data(address, chain) for chain in SUPPORTED_CHAINS],
+            return_exceptions=True
+        )
+
+        # Process chain results
+        for chain, chain_result in zip(SUPPORTED_CHAINS, chain_results):
+            if isinstance(chain_result, dict) and chain_result["status"] == "MATCH_FOUND_ON_ETHERSCAN":
+                result["chains"].append({
+                    "chain": chain,
+                    "transaction_count": chain_result["etherscan_info"]["transaction_count"],
+                    "transactions": chain_result["etherscan_info"]["transactions"],
                 })
 
-        # If no match is found in known origins, query Etherscan for additional information
-        if not matches:
-            etherscan_info = fetch_etherscan_v2_info(address_lower, chain)
-            if etherscan_info:
-                results.append({
-                    "address": address,
-                    "status": "MATCH_FOUND_ON_ETHERSCAN",
-                    "etherscan_info": etherscan_info
-                })
-            else:
-                results.append({
-                    "address": address,
-                    "status": "NO_MATCH"
-                })
-        else:
-            results.append({
-                "address": address,
-                "status": "MATCH_FOUND",
-                "matches": matches
-            })
+        results.append(result)
 
     return results
-
-# Helper function to query Etherscan V2 for address information
-def fetch_etherscan_v2_info(address, chain):
-    """
-    Fetch address information from Etherscan V2 API.
-
-    Args:
-        address (str): The Ethereum address to query.
-        chain (str): Blockchain chain to use for the query (e.g., 'ethereum', 'polygon').
-
-    Returns:
-        dict: Etherscan information for the address or None if no data is found.
-    """
-    try:
-        etherscan_details = get_etherscan_v2_details(address, chain=chain)
-        if etherscan_details and "transaction_type" in etherscan_details:
-            return {
-                "message": "Found on Etherscan",
-                "transaction_count": len(etherscan_details),
-                "transactions": etherscan_details
-            }
-        else:
-            logging.warning(f"No relevant data found for address {address} on chain {chain}.")
-            return None
-    except Exception as e:
-        logging.error(f"Error fetching Etherscan info for address {address} on chain {chain}: {e}")
-        return None
-

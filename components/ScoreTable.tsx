@@ -57,7 +57,6 @@ const ScoreTable: React.FC<ScoreTableProps> = ({
     setCurrentPage(page);
   };
 
-  // Fetch transaction summaries only when transactions are provided
   useEffect(() => {
     if (transactions.length === 0) return;
 
@@ -122,10 +121,9 @@ const ScoreTable: React.FC<ScoreTableProps> = ({
     if (!summary) return null;
 
     return (
-      <div className="summary-card bg-white shadow-md rounded-lg p-6 mb-6">
+      <div className="summary-card bg-gray-900 shadow-md rounded-lg p-6 mb-6 text-gray-200">
         <p className="text-lg">
-          <strong>Flagged Interactions:</strong>{" "}
-          {summary.number_of_interactions_with_flagged_addresses}
+          <strong>Flagged Interactions:</strong> {summary.number_of_interactions_with_flagged_addresses}
         </p>
         <p className="text-lg">
           <strong>Risky Transactions:</strong> {summary.number_of_risky_transactions}
@@ -143,35 +141,33 @@ const ScoreTable: React.FC<ScoreTableProps> = ({
   const renderTransactions = () => {
     return (
       <div className="overflow-x-auto">
-        <table className="w-full bg-white rounded-lg shadow-md">
-          <thead className="bg-gray-200">
+        <table className="w-full bg-gray-800 rounded-lg shadow-md border border-gray-700">
+          <thead className="bg-gray-700 text-gray-200">
             <tr>
-              <th className="py-2 px-4 border-b">Date</th>
-              <th className="py-2 px-4 border-b">Type</th>
-              <th className="py-2 px-4 border-b">Amount</th>
-              <th className="py-2 px-4 border-b">Status</th>
-              <th className="py-2 px-4 border-b">Involved Address</th>
+              <th className="py-2 px-4 border-b border-gray-600">Date</th>
+              <th className="py-2 px-4 border-b border-gray-600">Type</th>
+              <th className="py-2 px-4 border-b border-gray-600">Amount</th>
+              <th className="py-2 px-4 border-b border-gray-600">Status</th>
+              <th className="py-2 px-4 border-b border-gray-600">Involved Address</th>
             </tr>
           </thead>
           <tbody>
             {paginatedTransactions.map((txn, index) => (
               <tr
                 key={txn.id}
-                className={`text-center ${index % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
+                className={`text-center ${index % 2 === 0 ? "bg-gray-800" : "bg-gray-700"} hover:bg-gray-600`}
               >
-                <td className="py-2 px-4 border-b">
+                <td className="py-2 px-4 border-b border-gray-600">
                   {new Date(txn.timestamp).toLocaleDateString()}
                 </td>
-                <td className="py-2 px-4 border-b">{txn.type}</td>
-                <td className="py-2 px-4 border-b">${txn.usdAmount.toFixed(2)}</td>
-                <td className="py-2 px-4 border-b">
-                  <span
-                    className={txn.flagged ? "text-red-500 font-bold" : "text-green-500 font-bold"}
-                  >
+                <td className="py-2 px-4 border-b border-gray-600">{txn.type}</td>
+                <td className="py-2 px-4 border-b border-gray-600">${txn.usdAmount.toFixed(2)}</td>
+                <td className="py-2 px-4 border-b border-gray-600">
+                  <span className={txn.flagged ? "text-red-500 font-bold" : "text-green-500 font-bold"}>
                     {txn.flagged ? "Fail" : "Pass"}
                   </span>
                 </td>
-                <td className="py-2 px-4 border-b">{txn.thirdPartyWallet}</td>
+                <td className="py-2 px-4 border-b border-gray-600">{txn.thirdPartyWallet}</td>
               </tr>
             ))}
           </tbody>
@@ -184,7 +180,7 @@ const ScoreTable: React.FC<ScoreTableProps> = ({
               className={`px-4 py-2 mx-1 ${
                 currentPage === index + 1
                   ? "bg-blue-500 text-white"
-                  : "bg-gray-200 text-gray-700"
+                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
               } rounded`}
             >
               {index + 1}
@@ -198,29 +194,29 @@ const ScoreTable: React.FC<ScoreTableProps> = ({
   const renderResults = () => {
     return (
       <div className="overflow-x-auto">
-        <table className="w-full bg-white rounded-lg shadow-md">
-          <thead className="bg-gray-200">
+        <table className="w-full bg-gray-800 rounded-lg shadow-md border border-gray-700">
+          <thead className="bg-gray-700 text-gray-200">
             <tr>
-              <th className="py-2 px-4 border-b">Address</th>
-              <th className="py-2 px-4 border-b">Status</th>
-              <th className="py-2 px-4 border-b">Description</th>
+              <th className="py-2 px-4 border-b border-gray-600">Address</th>
+              <th className="py-2 px-4 border-b border-gray-600">Status</th>
+              <th className="py-2 px-4 border-b border-gray-600">Description</th>
             </tr>
           </thead>
           <tbody>
             {results.map((result, index) => (
               <tr
                 key={result.address}
-                className={`text-center ${index % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
+                className={`text-center ${index % 2 === 0 ? "bg-gray-800" : "bg-gray-700"} hover:bg-gray-600`}
               >
-                <td className="py-2 px-4 border-b">{result.address}</td>
+                <td className="py-2 px-4 border-b border-gray-600">{result.address}</td>
                 <td
-                  className={`py-2 px-4 border-b ${
+                  className={`py-2 px-4 border-b border-gray-600 ${
                     getColorForStatus ? getColorForStatus(result.status) : ""
                   }`}
                 >
                   {result.status}
                 </td>
-                <td className="py-2 px-4 border-b">
+                <td className="py-2 px-4 border-b border-gray-600">
                   {result.description || "No description provided"}
                 </td>
               </tr>
@@ -232,12 +228,12 @@ const ScoreTable: React.FC<ScoreTableProps> = ({
   };
 
   if (loading) {
-    return <div className="text-center">Loading...</div>;
+    return <div className="text-center text-gray-300">Loading...</div>;
   }
 
   return (
     <div className="score-transactions w-full max-w-lg mx-auto my-4">
-      <h2 className="text-2xl font-bold mb-4 text-center">Transaction History</h2>
+      <h2 className="text-2xl font-bold mb-4 text-center text-neorange">Transaction History</h2>
       {error && <p className="text-red-500">{error}</p>}
       {renderSummary()}
       {transactions.length > 0 ? renderTransactions() : renderResults()}

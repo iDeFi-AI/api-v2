@@ -7,8 +7,10 @@
   },
   "scripts": {
     "flask-dev": "FLASK_DEBUG=1 FLASK_APP=api.index python3 -m flask run -p 5328",
+    "gunicorn-dev": "gunicorn -b 0.0.0.0:5328 api.index:app --reload",
     "next-dev": "next dev",
     "dev": "concurrently \"npm run next-dev\" \"npm run flask-dev\"",
+    "dev-gunicorn": "concurrently \"npm run next-dev\" \"npm run gunicorn-dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

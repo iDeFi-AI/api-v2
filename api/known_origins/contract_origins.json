@@ -48,5 +48,6 @@
     {"name": "Akropolis Delphi", "type": "DeFi Yield Farming", "address": "0x26E5E9a8fB5B2b18D6A0Db3CBEBeCC3A87051e26"},
     {"name": "Saddle Finance", "type": "DEX", "address": "0x368b676c64445bdbf70201dce0652e9c1b5f9bb0"},
     {"name": "PoolTogether Prize Pool", "type": "DeFi Lottery", "address": "0x29feD0d0b85a097b4Aa13E5cC29A0B5E5c5B7b31"},
-    {"name": "Keep3rV1", "type": "DeFi Job Market", "address": "0x1cEB5cB57C4e483fEecaad6b51f6c3EBf663DD36"}
+    {"name": "Keep3rV1", "type": "DeFi Job Market", "address": "0x1cEB5cB57C4e483fEecaad6b51f6c3EBf663DD36"},
+    {"name": "Gemini", "type": "CEX Wallet", "address": "0x485b9a41e8BF06E57BB64c6Ba7cB04f9d53D2d76"}
 ]

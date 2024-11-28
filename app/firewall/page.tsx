@@ -20,26 +20,33 @@ const FirewallPage: React.FC = () => {
   const [results, setResults] = useState<AddressCheckResult[]>([]);
   const [error, setError] = useState<string>('');
   const [loadingStatus, setLoadingStatus] = useState<string>(''); // Loading status
+  const [progress, setProgress] = useState<number>(0); // Progress percentage
   const [fileUrl, setFileUrl] = useState<string>('');
   const [history, setHistory] = useState<any[]>([]);
   const [flaggedAddresses, setFlaggedAddresses] = useState<Set<string>>(new Set());
   const [selectedChain, setSelectedChain] = useState<string>('ethereum'); // Chain selector
-  const [{apiKeys: userApiKey }] = useAuth();
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [isClearing, setIsClearing] = useState<boolean>(false);
+  const [{ apiKeys: userApiKey }] = useAuth();
 
   // Fetch flagged addresses on component mount
   useEffect(() => {
     const fetchFlaggedAddresses = async () => {
       try {
         setLoadingStatus('Loading flagged addresses...');
+        setProgress(10);
         const response = await fetch('/api/get_flagged_addresses');
         if (!response.ok) throw new Error('Failed to fetch flagged addresses');
 
         const data = await response.json();
         setFlaggedAddresses(new Set(Object.keys(data.flagged_addresses)));
+        setProgress(100);
         setLoadingStatus('');
       } catch (error) {
         console.error('Error fetching flagged addresses:', error);
+        setError('Error loading flagged addresses. Please try again later.');
         setLoadingStatus('');
+        setProgress(0);
       }
     };
 
@@ -78,6 +85,7 @@ const FirewallPage: React.FC = () => {
     }
 
     setLoadingStatus('Checking addresses...');
+    setProgress(10);
 
     try {
       const response = await fetch('/api/checkaddress', {
@@ -93,15 +101,18 @@ const FirewallPage: React.FC = () => {
       }
 
       const data = await response.json();
+      setProgress(70);
       const processedResults = await processAddressCheck(data, flaggedAddresses);
       setResults(processedResults);
       setError('');
+      setProgress(100);
     } catch (error) {
       console.error('Error checking addresses:', error);
       setResults([]);
       setError('Error checking addresses. Please try again.');
     } finally {
       setLoadingStatus('');
+      setProgress(0);
     }
   };
 
@@ -110,6 +121,7 @@ const FirewallPage: React.FC = () => {
     if (!file) return;
 
     setLoadingStatus('Uploading file...');
+    setProgress(10);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -125,22 +137,24 @@ const FirewallPage: React.FC = () => {
       }
 
       const data = await response.json();
+      setProgress(70);
       const processedResults = await processAddressCheck(data.details, flaggedAddresses);
       setResults(processedResults);
       setFileUrl(data.file_url);
       setAddresses('');
       setError('');
+      setProgress(100);
 
       const user = auth.currentUser;
       if (user) {
         const uid = user.uid;
         const userHistoryPath = `users/${uid}/upload_history`;
-        const currentHistory = await getData(userHistoryPath) || [];
+        const currentHistory = (await getData(userHistoryPath)) || [];
         const updatedHistory = [
           ...currentHistory,
           { fileUrl: data.file_url, timestamp: new Date().toISOString() },
         ];
-        await storeData(userHistoryPath, updatedHistory); // Save updated history
+        await storeData(userHistoryPath, updatedHistory);
         setHistory(updatedHistory);
       }
     } catch (error) {
@@ -149,28 +163,39 @@ const FirewallPage: React.FC = () => {
       setError('Error uploading file. Please try again.');
     } finally {
       setLoadingStatus('');
+      setProgress(0);
     }
   };
 
   const handleDownloadResults = () => {
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      results.map((e) => `${e.address},${e.description},${e.status}`).join('\n');
+    setIsDownloading(true);
+    try {
+      const csvContent =
+        'data:text/csv;charset=utf-8,' +
+        results.map((e) => `${e.address},${e.description},${e.status}`).join('\n');
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'results.csv');
-    document.body.appendChild(link);
-
-    link.click();
-    document.body.removeChild(link);
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'results.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading results:', error);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleClearResults = () => {
-    setResults([]);
-    setFileUrl('');
-    setAddresses('');
+    setIsClearing(true);
+    setTimeout(() => {
+      setResults([]);
+      setFileUrl('');
+      setAddresses('');
+      setIsClearing(false);
+    }, 500);
   };
 
   return (
@@ -214,9 +239,13 @@ const FirewallPage: React.FC = () => {
           <button
             type="submit"
             disabled={!!loadingStatus}
-            className="px-4 py-2 bg-neorange text-black font-bold rounded-md hover:bg-orange-500 transition focus:outline-none focus:ring focus:ring-orange-300"
+            className={`px-4 py-2 font-bold rounded-md transition focus:outline-none ${
+              loadingStatus
+                ? 'bg-gray-500 cursor-not-allowed'
+                : 'bg-neorange text-black hover:bg-orange-500 focus:ring focus:ring-orange-300'
+            }`}
           >
-            {loadingStatus ? 'Analyzing...' : 'Analyze Addresses'}
+            {loadingStatus || 'Analyze Addresses'}
           </button>
         </form>
 
@@ -224,6 +253,12 @@ const FirewallPage: React.FC = () => {
           <div className="flex flex-col items-center mt-4">
             <TailSpin height="50" width="50" color="#ff9f66" ariaLabel="loading" />
             <p className="text-sm text-gray-300 mt-2">{loadingStatus}</p>
+            <div className="w-full bg-gray-700 rounded-full mt-2">
+              <div
+                className="bg-neorange h-2 rounded-full"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
           </div>
         )}
 
@@ -232,41 +267,32 @@ const FirewallPage: React.FC = () => {
         {results.length > 0 && (
           <div className="mt-6">
             <ScoreTable results={results} getColorForStatus={getColorForStatus} />
-            <button
-              onClick={handleDownloadResults}
-              className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
-            >
-              Download Results
-            </button>
-            <button
-              onClick={handleClearResults}
-              className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-            >
-              Clear Results
-            </button>
+            <div className="flex justify-between mt-4">
+              <button
+                onClick={handleDownloadResults}
+                disabled={isDownloading}
+                className={`px-4 py-2 rounded-md transition focus:outline-none ${
+                  isDownloading
+                    ? 'bg-gray-500 cursor-not-allowed'
+                    : 'bg-green-500 text-white hover:bg-green-600'
+                }`}
+              >
+                {isDownloading ? 'Downloading...' : 'Download Results'}
+              </button>
+              <button
+                onClick={handleClearResults}
+                disabled={isClearing}
+                className={`px-4 py-2 rounded-md transition focus:outline-none ${
+                  isClearing
+                    ? 'bg-gray-500 cursor-not-allowed'
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
+              >
+                {isClearing ? 'Clearing...' : 'Clear Results'}
+              </button>
+            </div>
           </div>
         )}
-
-        <div className="history-container mt-8">
-          <h2 className="text-lg font-semibold text-center text-neorange">Upload History</h2>
-          <ul className="text-white">
-            {history.map((item, index) => (
-              <li key={index} className="mt-2">
-                <p>
-                  <strong>Timestamp:</strong> {item.timestamp}
-                </p>
-                <a
-                  href={item.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
-                >
-                  View File
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </main>
   );

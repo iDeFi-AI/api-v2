@@ -31,7 +31,9 @@ const menuItems = [
       { icon: <FontAwesomeIcon icon={faDatabase} />, label: 'Contracts', url: '/smartscan' },
       { icon: <FontAwesomeIcon icon={faShieldAlt} />, label: 'DustCheck', url: '/undust' },
       { icon: <FontAwesomeIcon icon={faEye} />, label: 'TxMapping', url: '/txmap' },
-      { icon: <FontAwesomeIcon icon={faEye} />, label: 'Visualizing', url: '/visualize' },
+      { icon: <FontAwesomeIcon icon={faEye} />, label: 'Fam Tree', url: '/visualize' },
+      { icon: <FontAwesomeIcon icon={faEye} />, label: 'Risk Tree', url: '/risk-visual' },
+
     ],
   },
   {

@@ -3,7 +3,7 @@ firebase-admin==5.1.0
 Flask-Cors==3.0.10
 pandas==1.4.0
 requests==2.31.0
-python-dotenv==0.19.1
+python-dotenv==0.21.0
 Werkzeug==2.3.0
 numpy==1.21.0
 networkx==2.6.3
@@ -14,3 +14,7 @@ aiohttp==3.8.5
 tqdm==4.66.1
 PyJWT==2.6.0
 matplotlib==3.4.3
+gunicorn==21.2.0
+etherscan-python==2.0.0
+httpx
+

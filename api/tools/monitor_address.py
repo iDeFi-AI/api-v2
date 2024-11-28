@@ -5,7 +5,7 @@ import datetime
 import time
 import matplotlib.pyplot as plt
 from threading import Thread
-from api.tools.etherscanv2 import get_etherscan_v2_details  # Import etherscanv2 utility functions
+from api.tools.etherscanv2 import get_transaction_data  # Import etherscanv2 utility functions
 
 # Path to local flagged.json file
 FLAGGED_JSON_PATH = os.path.join(os.path.dirname(__file__), 'unique', 'flagged.json')
@@ -17,7 +17,7 @@ if not ETHERSCAN_API_KEY:
     raise ValueError("NEXT_PUBLIC_ETHERSCAN_API_KEY is not set in the environment")
 
 # Supported chains and their base URLs
-CHAIN_API_BASE_URLS = {
+SUPPORTED_CHAINS = {
     'ethereum': 'https://api.etherscan.io',
     'bsc': 'https://api.bscscan.com',
     'polygon': 'https://api.polygonscan.com',
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 # Function to fetch transactions
 def fetch_transactions(wallet_address, chain='ethereum'):
     try:
-        return get_etherscan_v2_details(wallet_address, chain=chain, module="account", action="txlist").get('result', [])
+        return get_transaction_data(wallet_address, chain=chain, module="account", action="txlist").get('result', [])
     except Exception as e:
         logger.error(f"Error fetching transactions: {e}")
         return []

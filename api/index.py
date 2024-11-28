@@ -9,6 +9,7 @@ import re
 import json
 import threading
 import time
+import asyncio
 from flask import Flask, request, jsonify, send_file, url_for, make_response
 import firebase_admin
 from firebase_admin import credentials, db, auth, initialize_app, storage
@@ -18,7 +19,8 @@ from flask_cors import CORS
 from io import BytesIO
 import requests
 
-from api.tools.visualize_relationships import visualize_relationships, UNIQUE_DIR  
+from api.tools.visualize_risk import visualize_risk
+from api.tools.visualize_relationships import visualize_relationships, UNIQUE_DIR
 from api.tools.monitor_address import monitor_address
 from api.tools.onchain_offchain import analyze_transactions, analyze_with_ai
 from api.tools.data_metrics import calculate_metrics_and_forensics
@@ -26,26 +28,40 @@ from api.tools.v1basic_metrics import fetch_transactions, process_data
 from api.tools.v2intermediate_metrics import generate_security_alerts, calculate_portfolio_health_score, calculate_tax_implications
 from api.tools.v3advanced_metrics import analyze_defi_exposure, perform_onchain_analysis, analyze_tokenized_assets, generate_wealth_plan
 from api.tools.address_checker import check_wallet_address, clean_and_validate_addresses
-from api.tools.origins import check_addresses_with_origins
+from api.tools.origins import process_addresses  # Import the async function for address processing
 import api.tools.smart_contract_analyzer
+from api.api_health import calculate_health
+from api.turnqey.turnqey_report import generate_turnqey_report
+from api.firebase_auth import firebase_auth_middleware
+from api.tools.etherscanv2 import get_transaction_data, is_valid_ethereum_address # Ensure etherscanv2 is correctly imported
 
-load_dotenv()
+
+# Determine the correct path for the .env file
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+dotenv_path = os.path.join(ROOT_DIR, '.env')
+
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
+    logging.info(f".env loaded successfully from: {dotenv_path}")
+else:
+    raise FileNotFoundError(f".env file not found at: {dotenv_path}")
+
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["https://api.idefi.ai", "https://api-v2.idefi.ai","https://q.idefi.ai", "http://localhost:3000", "https://agents.idefi.ai"]}})
+CORS(app, resources={r"/api/*": {"origins": [
+    "https://api.idefi.ai", "https://api-v2.idefi.ai", "https://q.idefi.ai", "http://localhost:3000", "https://agents.idefi.ai"]}})
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Get the base64-encoded service account key string
+# Firebase setup
 firebase_service_account_key_base64 = os.getenv('NEXT_PUBLIC_FIREBASE_SERVICE_ACCOUNT_KEY')
 if not firebase_service_account_key_base64:
     raise ValueError("Missing Firebase service account key environment variable")
-# Decode the base64-encoded string to bytes
+
 firebase_service_account_key_bytes = base64.b64decode(firebase_service_account_key_base64)
-# Convert bytes to JSON string
 firebase_service_account_key_str = firebase_service_account_key_bytes.decode('utf-8')
-# Initialize Firebase Admin SDK
+
 try:
     firebase_service_account_key_dict = json.loads(firebase_service_account_key_str)
     cred = credentials.Certificate(firebase_service_account_key_dict)
@@ -61,14 +77,11 @@ except Exception as e:
     logger.error(f"Firebase Initialization Error: {e}")
     raise
 
-# Get a reference to the Firebase Realtime Database and Storage
 database = db.reference()
 bucket = storage.bucket()
 
-# Define Coinbase origin address
+# Define paths and keys
 COINBASE_ORIGIN_ADDRESS = '0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43'
-
-# Define the directory containing the .json files
 MAPPED_ADDRESSES_DIR = os.path.join(os.path.dirname(__file__), 'data')
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'upload')
 UNIQUE_DIR = os.path.join(os.path.dirname(__file__), 'unique')
@@ -77,6 +90,99 @@ OPENAI_API_KEY = os.getenv('NEXT_PUBLIC_OPENAI_API_KEY')
 ETHERSCAN_API_KEY = os.getenv('NEXT_PUBLIC_ETHERSCAN_API_KEY')
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# API Keys
+ETHERSCAN_API_KEY = os.getenv("NEXT_PUBLIC_ETHERSCAN_API_KEY")
+OPENAI_API_KEY = os.getenv("NEXT_PUBLIC_OPENAI_API_KEY")
+
+# Helper to run asynchronous functions in Flask
+def run_async(func, *args, **kwargs):
+    """
+    Run an async function in a Flask route safely.
+    Ensures a new event loop is created if none exists in the current thread.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError as e:
+        # Create a new event loop if none exists in the current thread
+        if "There is no current event loop in thread" in str(e):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        else:
+            raise
+
+    if loop.is_running():
+        # If the event loop is already running, create a task
+        task = asyncio.ensure_future(func(*args, **kwargs))
+        loop.run_until_complete(task)
+        return task.result()
+    else:
+        # If no loop is running, directly run the coroutine
+        return loop.run_until_complete(func(*args, **kwargs))
+
+@app.route("/api/turnqey_report", methods=["POST"])
+@firebase_auth_middleware
+def turnqey_report_endpoint():
+    """
+    Endpoint to generate a Turnqey Report for a wallet address.
+    Requires Firebase authentication.
+    """
+    try:
+        # Parse input data
+        data = request.json
+        wallet_address = data.get("wallet_address")
+        chain = data.get("chain", "ethereum")  # Default to Ethereum if chain not specified
+
+        if not wallet_address:
+            logger.warning("Wallet address is missing in the request.")
+            return jsonify({"error": "Wallet address is required."}), 400
+
+        logger.info(f"Generating Turnqey Report for wallet: {wallet_address} on chain: {chain}")
+
+        # Generate the Turnqey Report
+        turnqey_report = asyncio.run(generate_turnqey_report(wallet_address, chain))
+        
+        # Return the generated report
+        return jsonify(turnqey_report), 200
+
+    except Exception as e:
+        logger.error(f"Error in Turnqey Report endpoint: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    """
+    Returns the health status of the API and its endpoints.
+    """
+    try:
+        # All endpoints set to Migrating
+        overrides = {
+            "/api/health": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/get_flagged_addresses": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/checkaddress": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/generate_gpt_analysis": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/upload": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/download/<filename>": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/get_all_tokens": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/validate_user": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/basic_metrics": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/advanced_metrics": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/visualize_dataset": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/transaction_summary": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/analyze_smart_contract": {"status": "Migrating", "message": "Service Under Migration"},
+            "/api/origins": {"status": "Migrating", "message": "Service Under Migration"},
+        }
+
+        health_status = calculate_health(overrides)
+        return jsonify(health_status), 200
+    except Exception as e:
+        return jsonify({
+            "overall_status": "Error",
+            "message": f"Health check failed: {str(e)}",
+            "endpoints": []
+        }), 500
+
 
 # Middleware to log the endpoint being called
 @app.before_request
@@ -396,32 +502,53 @@ def list_json_files():
         return jsonify({'error': str(e)}), 500
 
 
+from flask import request, jsonify
+import logging
+
 @app.route('/api/visualize_dataset', methods=['POST'])
+@firebase_auth_middleware
 def visualize_dataset():
-    data = request.json
-    source_type = data.get('source_type')  # Expected: 'data' or 'address'
-    address = data.get('address', None)
-    filename = data.get('filename', None)
-    max_nodes = data.get('max_nodes', None)
-
-    if not address and not filename:
-        return jsonify({'error': 'Either an Ethereum address or a filename is required'}), 400
-
+    """
+    Visualizes the dataset or Ethereum address relationships.
+    """
     try:
-        if source_type == 'address' and address:
-            logger.info(f"Visualizing address: {address}")
-            visualization_url = visualize_relationships(address=address, max_nodes=max_nodes)
-            return jsonify({'visualization_url': visualization_url})
+        # Parse JSON payload
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Missing JSON payload'}), 400
 
-        elif source_type == 'data' and filename:
+        source_type = data.get('source_type')  # Expected: 'data' or 'address'
+        address = data.get('address', None)
+        filename = data.get('filename', None)
+        max_nodes = data.get('max_nodes', None)
+
+        # Validate source_type
+        if not source_type or source_type not in ['data', 'address']:
+            return jsonify({'error': 'Invalid or missing source_type (expected "data" or "address")'}), 400
+
+        uid = request.uid  # Retrieved from the middleware
+
+        # Process based on source_type
+        if source_type == 'address':
+            if not address:
+                return jsonify({'error': 'Address is required for source_type "address"'}), 400
+
+            logger.info(f"Visualizing address: {address} for user: {uid}")
+            visualization_url = visualize_relationships(address=address, uid=uid, max_nodes=max_nodes)
+            return jsonify({'visualization_url': visualization_url}), 200
+
+        elif source_type == 'data':
+            if not filename:
+                return jsonify({'error': 'Filename is required for source_type "data"'}), 400
+
             filepath = os.path.join(MAPPED_ADDRESSES_DIR, filename)
             if not os.path.isfile(filepath):
                 logger.error(f"File not found: {filepath}")
                 return jsonify({'error': f'The file {filename} does not exist in the data directory.'}), 404
 
-            logger.info(f"Visualizing sample file: {filename}")
-            visualization_url = visualize_relationships(filepath=filepath, max_nodes=max_nodes)
-            return jsonify({'visualization_url': visualization_url})
+            logger.info(f"Visualizing sample file: {filename} for user: {uid}")
+            visualization_url = visualize_relationships(filepath=filepath, uid=uid, max_nodes=max_nodes)
+            return jsonify({'visualization_url': visualization_url}), 200
 
         else:
             return jsonify({'error': 'Invalid source type or missing data.'}), 400
@@ -430,24 +557,34 @@ def visualize_dataset():
         logger.error(f"Error during visualization: {str(e)}")
         return jsonify({'error': f"An error occurred: {str(e)}"}), 500
 
+
+from api.firebase_auth import firebase_auth_middleware  # Middleware to authenticate users
+
 @app.route('/api/visualize_risk', methods=['POST'])
+@firebase_auth_middleware  # This ensures the user is authenticated
 def visualize_risk_endpoint():
-    data = request.json
-    address = data.get('address', None)
-    chain = data.get('chain', 'ethereum')
-
-    if not address:
-        return jsonify({'error': 'An Ethereum address is required'}), 400
-
     try:
-        logger.info(f"Visualizing risk for address: {address}")
+        # Extract UID from middleware
+        uid = request.uid
+        data = request.json
+
+        # Validate payload
+        address = data.get('address', None)
+        chain = data.get('chain', 'ethereum')
+
+        if not address:
+            return jsonify({'error': 'An Ethereum address is required'}), 400
+
+        # Log the request
+        logger.info(f"Visualizing risk for address: {address} by user {uid}")
+
+        # Generate the visualization
         visualization_url = visualize_risk(address=address, chain=chain)
-        return jsonify({'visualization_url': visualization_url})
+        return jsonify({'visualization_url': visualization_url}), 200
 
     except Exception as e:
         logger.error(f"Error during risk visualization: {str(e)}")
         return jsonify({'error': f"An error occurred: {str(e)}"}), 500
-
 
 # Endpoint for checking multiple wallet addresses (including family structure)
 @app.route('/api/check_multiple_addresses', methods=['POST'])
@@ -864,24 +1001,53 @@ def get_data_and_metrics():
 # Define the /api/origins route
 @app.route('/api/origins', methods=['GET', 'POST'])
 def check_origins_endpoint():
-    if request.method == 'GET':
-        address = request.args.get('address')
-        if not address:
-            return jsonify({'error': 'Address is required'}), 400
+    """
+    API endpoint to check origins for Ethereum addresses.
+    Supports GET for single address and POST for multiple addresses.
+    """
+    try:
+        if request.method == 'GET':
+            # Handle GET request for a single address
+            address = request.args.get('address')
+            if not address:
+                return jsonify({'error': 'Address parameter is required'}), 400
 
-        # Perform address check for a single address
-        results = check_addresses_with_origins([address])
-        return jsonify(results[0])  # Return result for single address
+            if not is_valid_ethereum_address(address):
+                return jsonify({'error': 'Invalid Ethereum address'}), 400
 
-    elif request.method == 'POST':
-        data = request.get_json()
-        addresses = data.get('addresses', [])
-        if not addresses:
-            return jsonify({'error': 'Addresses parameter is required'}), 400
+            # Perform the check for a single address
+            results = run_async(process_addresses, [address])
+            if results:
+                return jsonify(results[0])  # Return the first result
+            return jsonify({'error': 'No data found for the provided address.'}), 404
 
-        # Perform address check for all provided addresses
-        results = check_addresses_with_origins(addresses)
-        return jsonify(results)
+        elif request.method == 'POST':
+            # Handle POST request for multiple addresses
+            data = request.get_json()
+            if not data or 'addresses' not in data:
+                return jsonify({'error': 'Addresses parameter is required'}), 400
+
+            addresses = data.get('addresses', [])
+            if not isinstance(addresses, list) or not addresses:
+                return jsonify({'error': 'Addresses must be a non-empty list'}), 400
+
+            # Validate all addresses
+            invalid_addresses = [addr for addr in addresses if not is_valid_ethereum_address(addr)]
+            if invalid_addresses:
+                return jsonify({
+                    'error': 'One or more Ethereum addresses are invalid',
+                    'invalid_addresses': invalid_addresses
+                }), 400
+
+            # Perform the check for all provided addresses
+            results = run_async(process_addresses, addresses)
+            if results:
+                return jsonify({'results': results})  # Return all results
+            return jsonify({'error': 'No data found for the provided addresses.'}), 404
+
+    except Exception as e:
+        logger.exception("Unhandled exception in /api/origins")
+        return jsonify({'error': f'An internal error occurred: {str(e)}'}), 500
 
 
 if __name__ == "__main__":
