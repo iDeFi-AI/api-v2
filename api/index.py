@@ -27,7 +27,7 @@ from api.tools.data_metrics import calculate_metrics_and_forensics
 from api.tools.v1basic_metrics import fetch_transactions, process_data
 from api.tools.v2intermediate_metrics import generate_security_alerts, calculate_portfolio_health_score, calculate_tax_implications
 from api.tools.v3advanced_metrics import analyze_defi_exposure, perform_onchain_analysis, analyze_tokenized_assets, generate_wealth_plan
-from api.tools.address_checker import check_wallet_address, clean_and_validate_addresses
+from api.tools.address_checker import load_flagged_data, check_wallet_address, clean_and_validate_addresses
 from api.tools.origins import process_addresses  # Import the async function for address processing
 import api.tools.smart_contract_analyzer
 from api.api_health import calculate_health
@@ -84,6 +84,7 @@ bucket = storage.bucket()
 COINBASE_ORIGIN_ADDRESS = '0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43'
 MAPPED_ADDRESSES_DIR = os.path.join(os.path.dirname(__file__), 'data')
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'upload')
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__)) 
 UNIQUE_DIR = os.path.join(os.path.dirname(__file__), 'unique')
 FLAGGED_JSON_PATH = os.path.join(UNIQUE_DIR, 'flagged.json')
 OPENAI_API_KEY = os.getenv('NEXT_PUBLIC_OPENAI_API_KEY')
@@ -95,11 +96,37 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ETHERSCAN_API_KEY = os.getenv("NEXT_PUBLIC_ETHERSCAN_API_KEY")
 OPENAI_API_KEY = os.getenv("NEXT_PUBLIC_OPENAI_API_KEY")
 
-# Helper to run asynchronous functions in Flask
+@app.route("/api/turnqey_report", methods=["POST"])
+@firebase_auth_middleware
+def turnqey_report_endpoint():
+    """
+    Endpoint to generate a Turnqey Report for a wallet address.
+    Requires Firebase authentication.
+    """
+    try:
+        # Parse input data
+        data = request.json
+        wallet_address = data.get("wallet_address")
+
+        if not wallet_address:
+            logger.warning("Wallet address is missing in the request.")
+            return jsonify({"error": "Wallet address is required."}), 400
+
+        logger.info(f"Generating Turnqey Report for wallet: {wallet_address}")
+
+        # Generate the Turnqey Report
+        turnqey_report = asyncio.run(generate_turnqey_report(wallet_address))
+
+        # Ensure the report is serializable and return it
+        return jsonify(turnqey_report), 200
+
+    except Exception as e:
+        logger.error(f"Error in Turnqey Report endpoint: {e}")
+        return jsonify({"error": str(e)}), 500
+
 def run_async(func, *args, **kwargs):
     """
-    Run an async function in a Flask route safely.
-    Ensures a new event loop is created if none exists in the current thread.
+    Helper function to run async functions in Flask routes safely.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -114,41 +141,10 @@ def run_async(func, *args, **kwargs):
     if loop.is_running():
         # If the event loop is already running, create a task
         task = asyncio.ensure_future(func(*args, **kwargs))
-        loop.run_until_complete(task)
-        return task.result()
+        return loop.run_until_complete(task)
     else:
         # If no loop is running, directly run the coroutine
         return loop.run_until_complete(func(*args, **kwargs))
-
-@app.route("/api/turnqey_report", methods=["POST"])
-@firebase_auth_middleware
-def turnqey_report_endpoint():
-    """
-    Endpoint to generate a Turnqey Report for a wallet address.
-    Requires Firebase authentication.
-    """
-    try:
-        # Parse input data
-        data = request.json
-        wallet_address = data.get("wallet_address")
-        chain = data.get("chain", "ethereum")  # Default to Ethereum if chain not specified
-
-        if not wallet_address:
-            logger.warning("Wallet address is missing in the request.")
-            return jsonify({"error": "Wallet address is required."}), 400
-
-        logger.info(f"Generating Turnqey Report for wallet: {wallet_address} on chain: {chain}")
-
-        # Generate the Turnqey Report
-        turnqey_report = asyncio.run(generate_turnqey_report(wallet_address, chain))
-        
-        # Return the generated report
-        return jsonify(turnqey_report), 200
-
-    except Exception as e:
-        logger.error(f"Error in Turnqey Report endpoint: {e}")
-        return jsonify({"error": str(e)}), 500
-
 
 @app.route("/api/health", methods=["GET"])
 def health_check():
@@ -183,42 +179,25 @@ def health_check():
             "endpoints": []
         }), 500
 
-
 # Middleware to log the endpoint being called
 @app.before_request
 def log_request_info():
     logger.debug('Endpoint: %s, Method: %s', request.endpoint, request.method)
 
-# Function to load flagged addresses
-@app.route('/api/get_flagged_addresses', methods=['GET'])
+@app.route('/api/get_flagged_addresses', methods=['GET', 'POST'])
 def get_flagged_addresses():
+    """
+    Serve flagged addresses dataset dynamically based on role or query.
+    """
     try:
-        logging.info(f"Attempting to load flagged.json from: {FLAGGED_JSON_PATH}")
+        flagged_data = load_flagged_data()
+        if not flagged_data:
+            return jsonify({'error': f'Dataset not found at {FLAGGED_JSON_PATH}'}), 404
 
-        if os.path.exists(FLAGGED_JSON_PATH):
-            logging.info(f"Flagged JSON file found at: {FLAGGED_JSON_PATH}")
-
-            # Correcting indentation here
-            with open(FLAGGED_JSON_PATH, 'r') as f:
-                content = f.read()  # Read the raw content before parsing
-                logging.debug(f"Raw flagged.json content: {content}")
-
-                try:
-                    flagged_addresses = json.loads(content)
-                except json.JSONDecodeError as json_error:
-                    logging.error(f"JSON Decode Error: {json_error}")
-                    flagged_addresses = handle_json_errors(content)  # Call handle_json_errors
-                    if not flagged_addresses:
-                        return jsonify({'error': f"JSON decode error: {str(json_error)}"}), 500
-
-            logging.info(f"Loaded flagged addresses successfully.")
-            return jsonify({'status': 'success', 'flagged_addresses': flagged_addresses, 'total': len(flagged_addresses)}), 200
-        else:
-            logging.error(f"File not found: {FLAGGED_JSON_PATH}")
-            return jsonify({'error': f'File not found: {FLAGGED_JSON_PATH}'}), 404
+        return jsonify({'status': 'success', 'flagged_addresses': flagged_data}), 200
     except Exception as e:
-        logging.error(f"Error loading flagged addresses: {e}")
-        return jsonify({'error': 'Error loading flagged addresses'}), 500
+        logger.error(f"Error loading flagged addresses: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 # Define the handle_json_errors function to handle malformed JSON content
 def handle_json_errors(raw_content):
@@ -253,32 +232,39 @@ def handle_json_errors(raw_content):
             logging.error(f"Error while attempting to process entries individually: {e}")
             return None
 
-@app.route('/api/checkaddress', methods=['GET', 'POST'])
+
+@app.route('/api/checkaddress', methods=['POST'])
 def check_wallet_address_endpoint():
-    if request.method == 'GET':
-        address = request.args.get('address')
-
-        if not address:
-            return jsonify({'error': 'Address is required'}), 400
-
-        # Perform wallet address check
-        results = check_wallet_address([address])  # Pass the address in a list
-
-        # Send response to the frontend
-        return jsonify(results[0])  # Only return the result for the single address
-
-    elif request.method == 'POST':
+    """
+    Endpoint to check wallet addresses against the flagged dataset.
+    """
+    try:
+        # Parse request data
         data = request.get_json()
         addresses = data.get('addresses', [])
+        chain = data.get('chain', 'ethereum')
 
         if not addresses:
             return jsonify({'error': 'Addresses parameter is required'}), 400
 
-        # Perform wallet address check for all addresses
-        results = check_wallet_address(addresses)
+        # Validate and clean addresses
+        cleaned_addresses = clean_and_validate_addresses(addresses)
 
-        # Send results to the frontend
-        return jsonify(results)
+        if not cleaned_addresses:
+            return jsonify({'error': 'No valid Ethereum addresses provided'}), 400
+
+        # Perform wallet address check
+        results = check_wallet_address(cleaned_addresses, chain)
+        return jsonify({'status': 'success', 'results': results}), 200
+
+    except Exception as e:
+        logger.error(f"Error in check_wallet_address_endpoint: {e}")
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+
+if __name__ == "__main__":
+    logger.info(f"Starting Flask app. Flagged dataset path: {FLAGGED_JSON_PATH}")
+    app.run(debug=True)
+
 
 # Route to generate GPT analysis
 @app.route('/api/generate_gpt_analysis', methods=['POST'])
@@ -436,7 +422,6 @@ def validate_user():
 
     except Exception as e:
         return jsonify({'error': 'User validation failed', 'details': str(e)}), 401
-
 
 # Endpoint for getting API key
 @app.route('/api/get_api_key', methods=['GET'])

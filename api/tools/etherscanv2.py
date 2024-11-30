@@ -40,7 +40,7 @@ SUPPORTED_CHAINS = {
 }
 
 # API Base URL
-API_URL = "https://api.etherscan.io/v2/api"
+API_URL = "https://api.etherscan.io/api"
 
 # Rate limit settings
 RATE_LIMIT_DELAY = 0.25  # Delay between requests (in seconds)
@@ -50,8 +50,40 @@ def is_valid_ethereum_address(address):
     """Validate Ethereum address format."""
     return bool(re.match(ETHEREUM_ADDRESS_PATTERN, address))
 
+# Convert value from wei to Ether
+def wei_to_ether(wei):
+    """Convert wei to Ether."""
+    return float(wei) / 10**18
+
+# Clean and enrich transactions
+def clean_transaction_data(transactions):
+    """Clean and enrich transaction data."""
+    cleaned_data = []
+    for tx in transactions:
+        if not tx.get("to") or tx.get("value") == "0":
+            continue  # Exclude irrelevant transactions
+
+        cleaned_tx = {
+            "blockNumber": tx.get("blockNumber"),
+            "timeStamp": tx.get("timeStamp"),
+            "hash": tx.get("hash"),
+            "from": tx.get("from"),
+            "to": tx.get("to"),
+            "value_ether": wei_to_ether(tx.get("value", "0")),
+            "gas": tx.get("gas"),
+            "gasPrice": wei_to_ether(tx.get("gasPrice", "0")),
+            "gasUsed": tx.get("gasUsed"),
+            "isError": tx.get("isError"),
+            "functionName": tx.get("functionName"),
+        }
+        cleaned_data.append(cleaned_tx)
+
+    # Sort by timestamp
+    cleaned_data.sort(key=lambda x: int(x["timeStamp"]))
+    return cleaned_data
+
 # Fetch transactions with retries
-async def fetch_transactions(chain_id, wallet_address, startblock=0, endblock=99999999, sort="asc", retries=3):
+async def fetch_transactions(chain_id, wallet_address, startblock=0, endblock=99999999, sort="asc", retries=3, timeout=10):
     """
     Fetch transaction data for a wallet address on a specific chain using Etherscan API.
     """
@@ -66,7 +98,7 @@ async def fetch_transactions(chain_id, wallet_address, startblock=0, endblock=99
         "apikey": ETHERSCAN_API_KEY,
     }
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         for attempt in range(retries):
             try:
                 logger.info(f"Fetching transactions for wallet {wallet_address} on chain {chain_id} (attempt {attempt + 1})")
@@ -75,7 +107,7 @@ async def fetch_transactions(chain_id, wallet_address, startblock=0, endblock=99
                 data = response.json()
 
                 if data.get("status") == "1":  # Success
-                    return data.get("result", [])
+                    return clean_transaction_data(data.get("result", []))
                 else:
                     logger.warning(f"Etherscan API error: {data.get('message')}")
                     return []
@@ -116,36 +148,20 @@ async def get_transaction_data(wallet_address, chains=None, startblock=0, endblo
 
     with tqdm(total=len(chains), desc="Processing chains", unit="chain") as pbar:
         for chain_name in chains:
-            chain_data = await process_chain_transactions(chain_name, wallet_address)
-            if chain_data:
-                results.append({
-                    "chain": chain_name,
-                    "transactions": chain_data,
-                })
-            else:
-                logger.warning(f"No relevant transactions found for {wallet_address} on {chain_name}.")
+            try:
+                chain_data = await process_chain_transactions(chain_name, wallet_address)
+                if chain_data:
+                    results.append({
+                        "chain": chain_name,
+                        "transactions": chain_data,
+                    })
+                else:
+                    logger.warning(f"No relevant transactions found for {wallet_address} on {chain_name}.")
+            except Exception as e:
+                logger.error(f"Error processing chain {chain_name}: {e}")
             pbar.update(1)
 
-    return results if results else "No relevant transactions found."
-
-# Rate-limited API calls
-async def rate_limited_fetch_transactions(wallet_address, chains=None):
-    """
-    Rate-limited fetching of transactions across chains.
-    """
-    chains = chains or SUPPORTED_CHAINS.keys()
-    results = []
-
-    for chain_name in chains:
-        await asyncio.sleep(RATE_LIMIT_DELAY)  # Ensure rate limit compliance
-        chain_data = await process_chain_transactions(chain_name, wallet_address)
-        if chain_data:
-            results.append({
-                "chain": chain_name,
-                "transactions": chain_data,
-            })
-
-    return results
+    return results if results else []
 
 # Entry point for testing
 if __name__ == "__main__":

@@ -11,23 +11,23 @@ import { CHAIN_API_BASE_URLS } from '@/utilities/chainURLS';
 
 const cleanAndValidateAddresses = (addresses: string[]): string[] => {
   return addresses
-    .map((address) => address.trim())
-    .filter((address) => /^0x[a-fA-F0-9]{40}$/.test(address));
+    .map((address: string) => address.trim()) // Explicitly type `address` as `string`
+    .filter((address: string) => /^0x[a-fA-F0-9]{40}$/.test(address)); // Validate Ethereum addresses
 };
 
 const FirewallPage: React.FC = () => {
-  const [addresses, setAddresses] = useState<string>('');
-  const [results, setResults] = useState<AddressCheckResult[]>([]);
-  const [error, setError] = useState<string>('');
-  const [loadingStatus, setLoadingStatus] = useState<string>(''); // Loading status
+  const [addresses, setAddresses] = useState<string>(''); // Explicitly typed as `string`
+  const [results, setResults] = useState<AddressCheckResult[]>([]); // Using `AddressCheckResult[]`
+  const [error, setError] = useState<string>(''); // Error message as `string`
+  const [loadingStatus, setLoadingStatus] = useState<string>(''); // Status message
   const [progress, setProgress] = useState<number>(0); // Progress percentage
-  const [fileUrl, setFileUrl] = useState<string>('');
-  const [history, setHistory] = useState<any[]>([]);
-  const [flaggedAddresses, setFlaggedAddresses] = useState<Set<string>>(new Set());
-  const [selectedChain, setSelectedChain] = useState<string>('ethereum'); // Chain selector
-  const [isDownloading, setIsDownloading] = useState<boolean>(false);
-  const [isClearing, setIsClearing] = useState<boolean>(false);
-  const [{ apiKeys: userApiKey }] = useAuth();
+  const [fileUrl, setFileUrl] = useState<string>(''); // File URL
+  const [history, setHistory] = useState<any[]>([]); // History as an array
+  const [flaggedAddresses, setFlaggedAddresses] = useState<Set<string>>(new Set()); // Set of flagged addresses
+  const [selectedChain, setSelectedChain] = useState<string>('ethereum'); // Selected chain
+  const [isDownloading, setIsDownloading] = useState<boolean>(false); // Download state
+  const [isClearing, setIsClearing] = useState<boolean>(false); // Clearing state
+  const [{ apiKeys: userApiKey }] = useAuth(); // Destructure API keys
 
   // Fetch flagged addresses on component mount
   useEffect(() => {
@@ -35,7 +35,15 @@ const FirewallPage: React.FC = () => {
       try {
         setLoadingStatus('Loading flagged addresses...');
         setProgress(10);
-        const response = await fetch('/api/get_flagged_addresses');
+
+        const response = await fetch('/api/get_flagged_addresses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ role: 'all' }),
+        });
+
         if (!response.ok) throw new Error('Failed to fetch flagged addresses');
 
         const data = await response.json();
@@ -76,17 +84,17 @@ const FirewallPage: React.FC = () => {
       setError('Please enter addresses.');
       return;
     }
-
+  
     const addressArray = cleanAndValidateAddresses(addresses.split('\n'));
-
+  
     if (addressArray.length === 0) {
       setError('No valid addresses provided.');
       return;
     }
-
+  
     setLoadingStatus('Checking addresses...');
     setProgress(10);
-
+  
     try {
       const response = await fetch('/api/checkaddress', {
         method: 'POST',
@@ -95,14 +103,17 @@ const FirewallPage: React.FC = () => {
         },
         body: JSON.stringify({ addresses: addressArray, chain: selectedChain }),
       });
-
+  
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
+  
       const data = await response.json();
+  
+      // Extract results for processAddressCheck
+      const results = data.results || []; // Safeguard if 'results' is undefined
       setProgress(70);
-      const processedResults = await processAddressCheck(data, flaggedAddresses);
+      const processedResults = await processAddressCheck(results, flaggedAddresses);
       setResults(processedResults);
       setError('');
       setProgress(100);
@@ -115,6 +126,7 @@ const FirewallPage: React.FC = () => {
       setProgress(0);
     }
   };
+  
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

@@ -21,22 +21,29 @@ required_env_vars = [
     "NEXT_PUBLIC_FIREBASE_API_KEY",
     "NEXT_PUBLIC_OPENAI_API_KEY",
     "NEXT_PUBLIC_BACKEND_URL",
-
 ]
+
 missing_vars = [var for var in required_env_vars if not os.getenv(var)]
 
 if missing_vars:
     raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 # Gunicorn configuration
-bind = "0.0.0.0:5328"  # Match the Flask port
-workers = multiprocessing.cpu_count() * 2 + 1  # Dynamic worker count
-timeout = 300  # Match the maximum duration of your serverless function
-loglevel = "info"
+bind = "0.0.0.0:5328"  # Match the Flask app's running port
+workers = multiprocessing.cpu_count() * 2 + 1  # Recommended worker count formula
+timeout = 300  # Extended timeout for long-running requests (300 seconds = 5 minutes)
+graceful_timeout = 30  # Time for workers to complete ongoing requests before shutdown
+loglevel = "info"  # Logging level
 
-# Logging setup
-accesslog = "-"  # Log to stdout
-errorlog = "-"   # Log to stderr
+# Enable thread workers if needed (optional, set threads > 1 for concurrency per worker)
+threads = 2
+
+# Access and error logging
+accesslog = "-"  # Log access logs to stdout
+errorlog = "-"   # Log error logs to stderr
+
+# Advanced keep-alive settings to handle hanging connections
+keepalive = 75  # Time to keep idle connections open
 
 # Setup logging configuration
 logging.basicConfig(
