@@ -114,8 +114,8 @@ def turnqey_report_endpoint():
 
         logger.info(f"Generating Turnqey Report for wallet: {wallet_address}")
 
-        # Generate the Turnqey Report
-        turnqey_report = asyncio.run(generate_turnqey_report(wallet_address))
+        # Generate the Turnqey Report using run_async helper
+        turnqey_report = run_async(generate_turnqey_report, wallet_address)
 
         # Ensure the report is serializable and return it
         return jsonify(turnqey_report), 200
@@ -124,26 +124,24 @@ def turnqey_report_endpoint():
         logger.error(f"Error in Turnqey Report endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
+
 def run_async(func, *args, **kwargs):
     """
     Helper function to run async functions in Flask routes safely.
     """
     try:
         loop = asyncio.get_event_loop()
-    except RuntimeError as e:
-        # Create a new event loop if none exists in the current thread
-        if "There is no current event loop in thread" in str(e):
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        else:
-            raise
+    except RuntimeError:
+        # If no event loop exists, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     if loop.is_running():
-        # If the event loop is already running, create a task
-        task = asyncio.ensure_future(func(*args, **kwargs))
-        return loop.run_until_complete(task)
+        # If loop is running, use `run_coroutine_threadsafe`
+        future = asyncio.run_coroutine_threadsafe(func(*args, **kwargs), loop)
+        return future.result()  # Wait for result and return it
     else:
-        # If no loop is running, directly run the coroutine
+        # Run coroutine in the event loop
         return loop.run_until_complete(func(*args, **kwargs))
 
 @app.route("/api/health", methods=["GET"])

@@ -145,8 +145,9 @@ export default function DeveloperPortal() {
               </div>
             ))
           ) : (
-            <p className="text-gray-400 text-sm sm:text-base">No API keys available.</p>
-          )}
+            <p className="text-sm sm:text-base text-gray-400">
+             Only generate an API key if you're working with more than one project.
+            </p>          )}
           {error && <p className="text-red-500 mt-4">{error}</p>}
         </div>
 

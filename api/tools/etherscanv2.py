@@ -32,11 +32,19 @@ ETHEREUM_ADDRESS_PATTERN = r"0x[a-fA-F0-9]{40}"
 # Supported Chains with Chain IDs
 SUPPORTED_CHAINS = {
     "ethereum": 1,
+    "sepolia": 11155111,
+    "holesky": 17000,
     "bsc": 56,
     "polygon": 137,
-    "arbitrum": 42161,
-    "optimism": 10,
+    "zkEVM_polygon": 1101,
     "base": 8453,
+    "arbitrum": 42161,
+    "nova_arbitrum": 42170,
+    "linea": 59144,
+    "ftm": 250,
+    "blast": 81457,
+    "optimism": 10,
+    "snow": 43114,
 }
 
 # API Base URL
