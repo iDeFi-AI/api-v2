@@ -76,7 +76,7 @@ export default function DocsPage() {
                 <div className="bg-gray-700 rounded-md p-4 overflow-auto">
                   <h3 className="font-bold text-white mb-2">Curl Example:</h3>
                   <code className="block whitespace-pre-wrap">
-                    {`curl -X POST https://your-api-endpoint.com/api/turnqey_report \\
+                    {`curl -X POST https://api-v2.idefi.ai/api/turnqey_report \\
 -H "Content-Type: application/json" \\
 -H "Authorization: Bearer ${userUid}" \\
 -d '{"wallet_address": "0xBcB42948c56906eAd635fC268653aD5286d8b88B"}'`}
@@ -87,7 +87,7 @@ export default function DocsPage() {
                 <div className="bg-gray-700 rounded-md p-4 overflow-auto">
                   <h3 className="font-bold text-white mb-2">JavaScript Example:</h3>
                   <code className="block whitespace-pre-wrap">
-                    {`fetch('https://your-api-endpoint.com/api/turnqey_report', {
+                    {`fetch('https://api-v2.idefi.ai/api/turnqey_report', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
