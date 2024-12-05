@@ -96,20 +96,20 @@ async def generate_openai_narrative(metrics, date):
         f"{wallet}: {risk}" for wallet, risk in metrics["financialMetrics"]["fraudRiskScores"].items()
     )
     prompt = f"""
-Generate a financial report narrative based on the following wallet metrics:
-Date: {date}
-Wallet Address: {metrics['wallet_address']}
-Total Transactions: {metrics['financialMetrics']['totalTransactions']}
-Interacting Wallets: {metrics['financialMetrics']['interactingWallets']}
-Interacting Wallet Transactions: {metrics['financialMetrics']['interactingWalletTransactions']}
-Most Active Wallet: {metrics['financialMetrics']['mostActiveWallet']['address']} with {metrics['financialMetrics']['mostActiveWallet']['transactionCount']} transactions.
-Fraud Risk Summary: {fraud_risk_summary}.
-"""
+        Generate a professional financial advisor basedreport narrative based on the following wallet metrics:
+        Date: {date}
+        Wallet Address: {metrics['wallet_address']}
+        Total Transactions: {metrics['financialMetrics']['totalTransactions']}
+        Interacting Wallets: {metrics['financialMetrics']['interactingWallets']}
+        Interacting Wallet Transactions: {metrics['financialMetrics']['interactingWalletTransactions']}
+        Most Active Wallet: {metrics['financialMetrics']['mostActiveWallet']['address']} with {metrics['financialMetrics']['mostActiveWallet']['transactionCount']} transactions.
+        Fraud Risk Summary: {fraud_risk_summary}.
+        """
     try:
         response = await openai.ChatCompletion.acreate(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a professional financial analyst generating wallet reports."},
+                {"role": "system", "content": "You are a professional financial advisor working generating wallet reports on behalf of the client."},
                 {"role": "user", "content": prompt},
             ],
         )

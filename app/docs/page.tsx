@@ -68,12 +68,12 @@ export default function DocsPage() {
               </div>
             )}
 
-            {/* Example Section */}
+            {/* API Usage Examples */}
             <div className="mt-8">
               <h2 className="text-xl text-neorange font-bold mb-4">API Usage Examples</h2>
               <div className="grid grid-cols-1 gap-6">
                 {/* Curl Example */}
-                <div className="bg-gray-700 rounded-md p-4 overflow-auto">
+                <div className="bg-gray-700 rounded-md p-4 overflow-auto relative">
                   <h3 className="font-bold text-white mb-2">Curl Example:</h3>
                   <code className="block whitespace-pre-wrap">
                     {`curl -X POST https://api-v2.idefi.ai/api/turnqey_report \\
@@ -81,10 +81,23 @@ export default function DocsPage() {
 -H "Authorization: Bearer ${userUid}" \\
 -d '{"wallet_address": "0xBcB42948c56906eAd635fC268653aD5286d8b88B"}'`}
                   </code>
+                  <button
+                    className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
+                    onClick={() =>
+                      copyToClipboard(
+                        `curl -X POST https://api-v2.idefi.ai/api/turnqey_report \\
+-H "Content-Type: application/json" \\
+-H "Authorization: Bearer ${userUid}" \\
+-d '{"wallet_address": "0xBcB42948c56906eAd635fC268653aD5286d8b88B"}'`
+                      )
+                    }
+                  >
+                    Copy
+                  </button>
                 </div>
 
                 {/* JavaScript Example */}
-                <div className="bg-gray-700 rounded-md p-4 overflow-auto">
+                <div className="bg-gray-700 rounded-md p-4 overflow-auto relative">
                   <h3 className="font-bold text-white mb-2">JavaScript Example:</h3>
                   <code className="block whitespace-pre-wrap">
                     {`fetch('https://api-v2.idefi.ai/api/turnqey_report', {
@@ -99,6 +112,96 @@ export default function DocsPage() {
   .then(data => console.log(data))
   .catch(error => console.error('Error:', error));`}
                   </code>
+                  <button
+                    className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
+                    onClick={() =>
+                      copyToClipboard(
+                        `fetch('https://api-v2.idefi.ai/api/turnqey_report', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ${userUid}',
+  },
+  body: JSON.stringify({ wallet_address: '0xBcB42948c56906eAd635fC268653aD5286d8b88B' }),
+})
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));`
+                      )
+                    }
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Response Examples */}
+            <div className="mt-8">
+              <h2 className="text-xl text-neorange font-bold mb-4">Response Examples</h2>
+              <div className="grid grid-cols-1 gap-6">
+                {/* Metrics Response */}
+                <div className="bg-gray-700 rounded-md p-4 overflow-auto relative">
+                  <h3 className="font-bold text-green-500 mb-2">Metrics Example:</h3>
+                  <code className="block whitespace-pre-wrap text-green-400">
+                    {`{
+  "wallet_address": "0xBcB42948c56906eAd635fC268653aD5286d8b88B",
+  "metrics": {
+    "totalTransactions": 142,
+    "transactionsByChain": {
+      "Ethereum": 92,
+      "Polygon": 50
+    },
+    "interactingWallets": 85,
+    "interactingWalletTransactions": 120,
+    "mostActiveWallet": {
+      "address": "0xAbC1234567890",
+      "transactionCount": 24
+    }
+  }
+}`}
+                  </code>
+                  <button
+                    className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
+                    onClick={() =>
+                      copyToClipboard(`{
+  "wallet_address": "0xBcB42948c56906eAd635fC268653aD5286d8b88B",
+  "metrics": {
+    "totalTransactions": 142,
+    "transactionsByChain": {
+      "Ethereum": 92,
+      "Polygon": 50
+    },
+    "interactingWallets": 85,
+    "interactingWalletTransactions": 120,
+    "mostActiveWallet": {
+      "address": "0xAbC1234567890",
+      "transactionCount": 24
+    }
+  }
+}`)
+                    }
+                  >
+                    Copy
+                  </button>
+                </div>
+
+                {/* Narrative Response */}
+                <div className="bg-gray-700 rounded-md p-4 overflow-auto relative">
+                  <h3 className="font-bold text-yellow-500 mb-2">Narrative Example:</h3>
+                  <code className="block whitespace-pre-wrap text-yellow-400">
+                    {`"Based on the transaction history, this wallet demonstrates consistent activity across Ethereum and Polygon networks, with 142 total transactions. It has engaged with 85 unique wallets, suggesting a high level of interconnectivity. However, some associated wallets exhibit a moderate fraud risk, necessitating cautious further analysis. The most active wallet interaction accounted for 24 transactions, indicating a potential strategic relationship."`}
+                  </code>
+                  <button
+                    className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
+                    onClick={() =>
+                      copyToClipboard(
+                        `"Based on the transaction history, this wallet demonstrates consistent activity across Ethereum and Polygon networks, with 142 total transactions. It has engaged with 85 unique wallets, suggesting a high level of interconnectivity. However, some associated wallets exhibit a moderate fraud risk, necessitating cautious further analysis. The most active wallet interaction accounted for 24 transactions, indicating a potential strategic relationship."`
+                      )
+                    }
+                  >
+                    Copy
+                  </button>
                 </div>
               </div>
             </div>
