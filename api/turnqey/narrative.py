@@ -3,10 +3,10 @@ import os
 import asyncio
 import uuid
 import logging
-import base64
 from firebase_admin import credentials, storage
 import firebase_admin
 import json
+import base64
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -51,6 +51,9 @@ except ValueError as e:
     logger.error(f"Firebase initialization failed: {e}")
     raise
 
+# External logo URL
+EXTERNAL_LOGO_URL = "https://cdn.prod.website-files.com/631ee5b346419b93f92caf9a/631f8989dada7e625bfa2660_401_Website_Cover-01-01.jpg"
+
 async def generate_openai_narrative(metrics, date):
     """
     Generate a professional financial report narrative based on wallet metrics.
@@ -86,16 +89,24 @@ async def generate_openai_narrative(metrics, date):
                 {"role": "user", "content": prompt.strip()},
             ],
         )
-        narrative = response["choices"][0]["message"]["content"]
-        return format_as_html_template(narrative, date)
+        return response["choices"][0]["message"]["content"]
     except Exception as e:
         raise RuntimeError(f"Error generating narrative: {e}")
 
 def format_as_html_template(narrative, date):
     """
-    Formats the narrative into an HTML template with a logo.
+    Formats the narrative into a styled HTML template with an option to edit or copy content.
     """
-    logo_path = "/public/financial.jpg"  # Adjust path as necessary to match your backend/frontend structure
+    # Clean and format narrative text
+    cleaned_narrative = (
+        narrative.replace("### ", "<h3>")
+                 .replace("## ", "<h2>")
+                 .replace("#", "")  # Remove single hash artifacts
+                 .replace("**", "<strong>")
+                 .replace(" --- ", "<br><br>")
+    )
+
+    # Return the HTML template
     return f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -105,90 +116,156 @@ def format_as_html_template(narrative, date):
         <style>
             body {{
                 font-family: Arial, sans-serif;
-                line-height: 1.6;
-                color: #333;
-                margin: 20px;
+                background-color: #f9f9f9;
+                margin: 0;
+                padding: 0;
+            }}
+            .container {{
+                max-width: 900px;
+                margin: 30px auto;
+                padding: 20px;
+                background: #ffffff;
+                border-radius: 12px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             }}
             .header {{
-                display: flex;
-                align-items: center;
-                border-bottom: 2px solid #ccc;
-                padding-bottom: 10px;
+                text-align: center;
                 margin-bottom: 20px;
             }}
             .logo {{
-                height: 50px;
-                margin-right: 20px;
+                height: 120px;
+                border-radius: 12px;
             }}
             .content {{
-                margin: 20px 0;
+                line-height: 1.8;
+                color: #333;
+                font-size: 16px;
+            }}
+            .content h1 {{
+                text-align: center;
+                color: #4a90e2;
+                margin-bottom: 20px;
+            }}
+            .content h2 {{
+                font-size: 20px;
+                color: #333;
+                margin-top: 20px;
+                border-bottom: 2px solid #ddd;
+                padding-bottom: 5px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .content h3 {{
+                font-size: 18px;
+                color: #555;
+                margin-top: 15px;
+            }}
+            .content p {{
+                margin: 10px 0;
+                text-align: justify;
+            }}
+            .note {{
+                background: #f1f8ff;
+                padding: 8px 12px;
+                border-left: 4px solid #007bff;
+                border-radius: 8px;
+                font-size: 14px;
+                color: #333;
+            }}
+            .button-container {{
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }}
+            .button {{
+                background: #007bff;
+                color: #fff;
+                padding: 5px 10px;
+                font-size: 14px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }}
+            .button:hover {{
+                background: #0056b3;
             }}
             .footer {{
-                border-top: 2px solid #ccc;
-                padding-top: 10px;
-                margin-top: 20px;
-                font-size: 0.9em;
                 text-align: center;
+                margin-top: 20px;
+                font-size: 14px;
                 color: #555;
+            }}
+            a {{
+                color: #4a90e2;
+                text-decoration: none;
+            }}
+            a:hover {{
+                text-decoration: underline;
             }}
         </style>
         <title>Financial Report</title>
     </head>
     <body>
-        <div class="header">
-            <img src="{logo_path}" alt="Company Logo" class="logo">
-            <h1>Financial Report</h1>
-        </div>
-        <p><strong>Date:</strong> {date}</p>
-        <div class="content">
-            {narrative}
-        </div>
-        <div class="footer">
-            <p>Thank you,</p>
-            <p><strong>401 Financial</strong></p>
+        <div class="container">
+            <div class="header">
+                <img src="https://cdn.prod.website-files.com/631ee5b346419b93f92caf9a/631f8989dada7e625bfa2660_401_Website_Cover-01-01.jpg" alt="401 Financial Logo" class="logo">
+                <h1>Financial Report</h1>
+            </div>
+            <div class="content">
+                <p><strong>Date:</strong> {date}</p>
+                <h2>
+                    Report Narrative
+                    <div class="button-container">
+                        <span class="note">You can edit this content directly or copy it for further use.</span>
+                        <button class="button" onclick="alert('Edit functionality coming soon!')">Edit</button>
+                        <button class="button" onclick="navigator.clipboard.writeText(document.body.innerText)">Copy</button>
+                    </div>
+                </h2>
+                {cleaned_narrative}
+            </div>
+            <div class="footer">
+                <p>Generated by <strong>401 Financial</strong></p>
+                <p><a href="https://api-v2.idefi.ai">Visit Our Platform</a></p>
+            </div>
         </div>
     </body>
     </html>
     """
 
-def save_narrative_as_html(html_content, wallet_address):
-    """Save the narrative HTML content to a file."""
-    output_dir = os.path.join("data", "narratives")
-    os.makedirs(output_dir, exist_ok=True)
+def upload_to_firebase(content, wallet_address):
+    """
+    Upload content to Firebase and return its public URL.
+
+    Args:
+        content (str): Content to upload.
+        wallet_address (str): Ethereum wallet address for naming.
+
+    Returns:
+        str: Public URL of the uploaded file.
+    """
     file_name = f"{wallet_address}_{uuid.uuid4().hex}.html"
-    file_path = os.path.join(output_dir, file_name)
-
-    with open(file_path, "w", encoding="utf-8") as file:
-        file.write(html_content)
-
-    return file_path
-
-def upload_to_firebase(file_path, wallet_address):
-    """Upload the narrative HTML file to Firebase and return the public URL."""
-    blob_path = f"narratives/{wallet_address}_{os.path.basename(file_path)}"
+    blob_path = f"narratives/{file_name}"
     blob = bucket.blob(blob_path)
 
-    with open(file_path, "rb") as file:
-        blob.upload_from_file(file, content_type="text/html")
+    blob.upload_from_string(content, content_type="text/html")
     blob.make_public()
 
+    logger.info(f"Uploaded {file_name} to Firebase: {blob.public_url}")
     return blob.public_url
 
-def generate_narrative(metrics, date, wallet_address, upload_to_cloud=True):
+def generate_narrative(metrics, date, wallet_address):
     """
-    Generate a narrative, save it as HTML, and optionally upload it to Firebase.
+    Generate a narrative, format it as HTML, and upload to Firebase.
+
+    Returns:
+        dict: URL for HTML narrative.
     """
     try:
-        html_content = asyncio.run(generate_openai_narrative(metrics, date))
-        local_path = save_narrative_as_html(html_content, wallet_address)
-
-        if upload_to_cloud:
-            public_url = upload_to_firebase(local_path, wallet_address)
-            os.remove(local_path)  # Cleanup local file
-            return {"html_url": public_url}
-        else:
-            return {"html_path": local_path}
-
+        narrative = asyncio.run(generate_openai_narrative(metrics, date))
+        full_html = format_as_html_template(narrative, date)
+        html_url = upload_to_firebase(full_html, wallet_address)
+        return {"html_url": html_url}
     except Exception as e:
         logger.error(f"Error generating narrative: {e}")
         raise RuntimeError(f"Error generating narrative: {e}")

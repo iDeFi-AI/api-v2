@@ -1,86 +1,216 @@
 import json
 import asyncio
 import logging
+import os
+import uuid
+import base64
 from datetime import datetime
 from tqdm.asyncio import tqdm
-
-# Import modules from api.turnqey
+from firebase_admin import credentials, storage
+import firebase_admin
 from api.turnqey.metrics import generate_metrics
 from api.turnqey.narrative import generate_narrative
-from api.turnqey.origins import process_addresses_async
 from api.turnqey.visualize import create_visualization
 
 # Logging configuration
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-async def generate_turnqey_report(wallet_address: str):
+# Firebase initialization
+def initialize_firebase(app_name="full_report_service"):
+    """Initializes Firebase Admin SDK."""
+    if app_name not in firebase_admin._apps:
+        firebase_service_account_key_base64 = os.getenv("NEXT_PUBLIC_FIREBASE_SERVICE_ACCOUNT_KEY")
+        if not firebase_service_account_key_base64:
+            raise ValueError("Missing Firebase service account key environment variable.")
+
+        try:
+            firebase_service_account_key_bytes = base64.b64decode(firebase_service_account_key_base64)
+            firebase_service_account_key_str = firebase_service_account_key_bytes.decode("utf-8")
+            firebase_service_account_key_dict = json.loads(firebase_service_account_key_str)
+
+            if firebase_service_account_key_dict.get("type") != "service_account":
+                raise ValueError("Invalid service account certificate.")
+
+            cred = credentials.Certificate(firebase_service_account_key_dict)
+            firebase_admin.initialize_app(
+                cred,
+                {"storageBucket": "api-v2-idefi-ai.firebasestorage.app"},
+                name=app_name,
+            )
+        except Exception as e:
+            raise ValueError(f"Error initializing Firebase: {e}")
+
+    return storage.bucket(app=firebase_admin.get_app(app_name))
+
+# Initialize Firebase bucket
+try:
+    bucket = initialize_firebase()
+except ValueError as e:
+    logger.error(f"Firebase initialization failed: {e}")
+    raise
+
+# Set external logo URL
+EXTERNAL_LOGO_URL = "https://cdn.prod.website-files.com/631ee5b346419b93f92caf9a/631f8989dada7e625bfa2660_401_Website_Cover-01-01.jpg"
+
+def format_as_email(metrics, narrative_html_url, visualization_url, date):
+    """Format the full report as an HTML email."""
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                margin: 20px;
+            }}
+            .header {{
+                text-align: center;
+                margin-bottom: 20px;
+            }}
+            .logo {{
+                height: 80px;
+            }}
+            .content {{
+                margin: 20px 0;
+            }}
+            .footer {{
+                margin-top: 20px;
+                font-size: 0.9em;
+                text-align: center;
+                color: #555;
+            }}
+            a {{
+                color: #007BFF;
+                text-decoration: none;
+            }}
+            a:hover {{
+                text-decoration: underline;
+            }}
+        </style>
+        <title>Turnqey Report</title>
+    </head>
+    <body>
+        <div class="header">
+            <img src="{EXTERNAL_LOGO_URL}" alt="Turnqey Logo" class="logo">
+            <h1>Comprehensive Wallet Report</h1>
+            <p><strong>Date:</strong> {date}</p>
+        </div>
+        <div class="content">
+            <h2>Wallet Address: {metrics['wallet_address']}</h2>
+            <p>Total Transactions: {metrics['financialMetrics']['totalTransactions']}</p>
+            <p>Interacting Wallets: {metrics['financialMetrics']['interactingWallets']}</p>
+            <p>Most Active Wallet: {metrics['financialMetrics']['mostActiveWallet']['address']} 
+               ({metrics['financialMetrics']['mostActiveWallet']['transactionCount']} transactions)</p>
+            <p>Fraud Risk Summary:</p>
+            <ul>
+                <li>Low Risk Wallets: {metrics['financialMetrics']['fraudRiskSummary']['Low']}</li>
+                <li>Moderate Risk Wallets: {metrics['financialMetrics']['fraudRiskSummary']['Moderate']}</li>
+                <li>High Risk Wallets: {metrics['financialMetrics']['fraudRiskSummary']['High']}</li>
+                <li>Flagged Wallets: {metrics['financialMetrics']['fraudRiskSummary']['Flagged']}</li>
+            </ul>
+            <h3>Links:</h3>
+            <ul>
+                <li><a href="{narrative_html_url}" target="_blank">View Full Narrative</a></li>
+                <li><a href="{visualization_url}" target="_blank">View Visualization</a></li>
+            </ul>
+        </div>
+        <div class="footer">
+            <p>Generated by Turnqey</p>
+            <p><a href="https://api-v2.idefi.ai">Visit our API</a></p>
+        </div>
+    </body>
+    </html>
     """
-    Generates a comprehensive Turnqey report by integrating multiple Turnqey APIs.
+
+async def generate_turnqey_report(wallet_address, user_uid):
+    """
+    Generates a comprehensive Turnqey report and uploads the generated files to Firebase.
 
     Args:
         wallet_address (str): The Ethereum wallet address to analyze.
+        user_uid (str): User's unique ID for authorization.
 
     Returns:
-        dict: Report metadata, including URLs for metrics, narrative, and visualization.
+        dict: URLs for HTML and Markdown reports hosted on Firebase.
     """
     try:
-        if not wallet_address:
-            raise ValueError("Wallet address is required.")
+        if not wallet_address or not user_uid:
+            raise ValueError("Wallet address and user UID are required.")
 
         logger.info(f"Starting Turnqey report generation for wallet: {wallet_address}")
 
-        with tqdm(total=4, desc="Generating Report", unit="step") as progress_bar:
+        with tqdm(total=3, desc="Generating Report", unit="step") as progress_bar:
             # Step 1: Fetch metrics
             logger.info("Fetching metrics...")
-            metrics = generate_metrics(wallet_address)
+            metrics = await generate_metrics(wallet_address, user_uid)
             progress_bar.update(1)
 
-            # Step 2: Analyze origins
-            logger.info("Analyzing origins...")
-            origins = process_addresses_async(wallet_address)
-            progress_bar.update(1)
-
-            # Step 3: Generate narrative
+            # Step 2: Generate narrative
             logger.info("Generating narrative...")
             date = datetime.now().strftime("%Y-%m-%d")
-            narrative = await generate_narrative(metrics, date)
+            narrative_response = await generate_narrative(wallet_address, user_uid, metrics, date)
+            narrative_html_url = narrative_response.get("html_url")
             progress_bar.update(1)
 
-            # Step 4: Create visualization
+            # Step 3: Create visualization
             logger.info("Creating visualization...")
-            visualization_url = await create_visualization(wallet_address)
+            visualization_response = await create_visualization(wallet_address, user_uid)
+            visualization_url = visualization_response.get("visualization_url")
             progress_bar.update(1)
 
-        # Combine all data into a single report
-        full_report = {
-            "date": date,
-            "wallet_address": wallet_address,
-            "metrics": metrics,
-            "origins": origins,
-            "narrative": narrative,
-            "visualization_url": visualization_url,
+        # Format the report as an email
+        email_content = format_as_email(metrics, narrative_html_url, visualization_url, date)
+
+        # Upload HTML and Markdown versions to Firebase
+        html_url = upload_to_firebase(email_content, wallet_address, "html")
+        markdown_url = upload_to_firebase(email_content, wallet_address, "md")
+
+        return {
+            "html_url": html_url,
+            "markdown_url": markdown_url,
         }
-
-        # Save the full report to a JSON file
-        report_file = f"{wallet_address}_turnqey_full_report.json"
-        with open(report_file, "w") as file:
-            json.dump(full_report, file, indent=4)
-
-        logger.info(f"Full report generated: {report_file}")
-        return full_report
 
     except Exception as e:
         logger.error(f"Error generating Turnqey Report: {e}")
         return {"error": str(e)}
 
+def upload_to_firebase(content, wallet_address, file_extension):
+    """
+    Upload content to Firebase and return its public URL.
+
+    Args:
+        content (str): Content to upload.
+        wallet_address (str): Ethereum wallet address for naming.
+        file_extension (str): File extension (html or md).
+
+    Returns:
+        str: Public URL of the uploaded file.
+    """
+    file_name = f"{wallet_address}_{uuid.uuid4().hex}.{file_extension}"
+    blob_path = f"reports/{file_name}"
+    blob = bucket.blob(blob_path)
+
+    blob.upload_from_string(content, content_type="text/html" if file_extension == "html" else "text/markdown")
+    blob.make_public()
+
+    logger.info(f"Uploaded {file_name} to Firebase: {blob.public_url}")
+    return blob.public_url
+
+
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) < 2:
-        print("Usage: python full_report.py <wallet_address>")
+    if len(sys.argv) < 3:
+        print("Usage: python full_report.py <wallet_address> <user_uid>")
         sys.exit(1)
 
     wallet_address = sys.argv[1].strip()
-    report = asyncio.run(generate_turnqey_report(wallet_address))
-    print(json.dumps(report, indent=4))
+    user_uid = sys.argv[2].strip()
+    report = asyncio.run(generate_turnqey_report(wallet_address, user_uid))
+
+    print("Generated Report URLs:", report)

@@ -88,20 +88,6 @@ export default function DocsPage() {
 
   const examplePrompts = [
     {
-      title: 'Fetch Origins',
-      endpoint: 'GET /api/origins',
-      prompt: `How can I fetch origins for a single wallet using GET /api/origins? Here is the request example you can copy:
-    
-  Method: GET
-  URL: https://api-v2.idefi.ai/api/origins?address=0xYourWalletAddressHere
-  Headers:
-  Authorization: Bearer {your_uid}
-  
-  How can I implement this in:
-  1. A Python Flask backend?
-  2. A JavaScript frontend?`,
-    },
-    {
       title: 'Fetch Metrics',
       endpoint: 'POST /api/metrics',
       prompt: `How do I retrieve wallet metrics using POST /api/metrics? Here is the request example you can copy:
@@ -113,10 +99,9 @@ export default function DocsPage() {
   Content-Type: application/json
   Body:
   {
-    "wallet_address": "0xYourWalletAddressHere",
-    "chains": ["ethereum", "polygon", "arbitrum", "optimism"]
+    "wallet_address": "0xYourWalletAddressHere"
   }
-  
+
   How can I implement this in:
   1. A Python Flask backend?
   2. A JavaScript frontend?`,
@@ -161,7 +146,7 @@ export default function DocsPage() {
   2. A JavaScript frontend?`,
     },
     {
-      title: 'Visualize Family Trees',
+      title: 'Visualize Transactions',
       endpoint: 'POST /api/visualize',
       prompt: `How can I generate and visualize wallet relationships using POST /api/visualize? Here is the request example:
   
@@ -430,85 +415,6 @@ export default function DocsPage() {
 
             {/* API Endpoints */}
             <div>
-            {renderEndpointExample(
-            'GET /api/origins',
-            'Fetch origins for a single wallet address.',
-            // For each activeTab, we provide a snippet reflecting that language:
-            activeTab === 'cURL'
-              ? 'curl -X GET'
-              : activeTab === 'JavaScript'
-              ? 'fetch("https://api-v2.idefi.ai/api/origins?address=0xYourWalletAddressHere", {'
-              : 'import requests\n\nresponse = requests.get(',
-            activeTab === 'cURL'
-              ? 'https://api-v2.idefi.ai/api/origins?address=0xYourWalletAddressHere'
-              : activeTab === 'JavaScript'
-              ? ''
-              : '"https://api-v2.idefi.ai/api/origins?address=0xYourWalletAddressHere",',
-            activeTab === 'cURL'
-              ? '-H "Authorization: Bearer {your_uid}"'
-              : activeTab === 'JavaScript'
-              ? '  method: "GET",\n  headers: { Authorization: "Bearer {your_uid}" }'
-              : 'headers={"Authorization": "Bearer {your_uid}"}',
-            activeTab === 'cURL'
-              ? ''
-              : activeTab === 'JavaScript'
-              ? '}).then(res => res.json()).then(console.log);'
-              : 'print(response.json())',
-`{
-  "address": "0xYourWalletAddressHere",
-  "known_origins": [
-      {
-        "transaction_hash": "0xTransactionHash",
-        "origin_name": "Origin Contract",
-        "origin_type": "DeFi",
-        "origin_address": "0xOriginAddress"
-      }
-    ],
-  "transactions": [...]
-}`,
-            200
-          )}
-
-          {renderEndpointExample(
-            'POST /api/origins',
-            'Fetch origins for multiple wallet addresses.',
-            activeTab === 'cURL'
-              ? 'curl -X POST'
-              : activeTab === 'JavaScript'
-              ? 'fetch("https://api-v2.idefi.ai/api/origins", {'
-              : 'import requests\n\nresponse = requests.post(',
-            activeTab === 'cURL'
-              ? 'https://api-v2.idefi.ai/api/origins'
-              : activeTab === 'JavaScript'
-              ? ''
-              : '"https://api-v2.idefi.ai/api/origins",',
-            activeTab === 'cURL'
-              ? '-H "Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json"'
-              : activeTab === 'JavaScript'
-              ? '  method: "POST",\n  headers: {\n    Authorization: "Bearer {your_uid}",\n    "Content-Type": "application/json"\n  }'
-              : 'headers={"Authorization": "Bearer {your_uid}", "Content-Type": "application/json"}',
-            activeTab === 'cURL'
-              ? '-d \'{"addresses": ["0xAddress1", "0xAddress2"]}\''
-              : activeTab === 'JavaScript'
-              ? ',\n  body: JSON.stringify({ addresses: ["0xAddress1", "0xAddress2"] })\n}).then(res => res.json()).then(console.log);'
-              : 'json={"addresses": ["0xAddress1", "0xAddress2"]}\n\nprint(response.json())',
-`{
-  "results": [
-    {
-      "address": "0xAddress1",
-      "known_origins": [...],
-      "transactions": [...]
-    },
-    {
-      "address": "0xAddress2",
-      "known_origins": [...],
-      "transactions": [...]
-    }
-  ]
-}`,
-            200
-          )}
-
           {renderEndpointExample(
             'POST /api/metrics',
             'Fetch wallet metrics including Layer 1 and Layer 2 breakdowns, interacting wallets, and fraud risk analysis.',
@@ -523,15 +429,15 @@ export default function DocsPage() {
               ? ''
               : '"https://api-v2.idefi.ai/api/metrics",',
             activeTab === 'cURL'
-              ? '-H "Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json"'
+              ? 'Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json'
               : activeTab === 'JavaScript'
               ? '  method: "POST",\n  headers: {\n    Authorization: "Bearer {your_uid}",\n    "Content-Type": "application/json"\n  }'
               : 'headers={"Authorization": "Bearer {your_uid}", "Content-Type": "application/json"}',
             activeTab === 'cURL'
-              ? '-d \'{"wallet_address": "0xYourWalletAddressHere", "chains": ["ethereum", "polygon", "arbitrum", "optimism"]}\''
+              ? '{"wallet_address": "0xYourWalletAddressHere"}'
               : activeTab === 'JavaScript'
-              ? ',\n  body: JSON.stringify({\n    wallet_address: "0xYourWalletAddressHere",\n    chains: ["ethereum", "polygon", "arbitrum", "optimism"],\n  })\n}).then(res => res.json()).then(console.log);'
-              : 'json={"wallet_address": "0xYourWalletAddressHere", "chains": ["ethereum", "polygon", "arbitrum", "optimism"]}\n\nprint(response.json())',
+              ? '{\n    wallet_address: "0xYourWalletAddressHere"}'
+              : '{"wallet_address": "0xYourWalletAddressHere"}\n',
 `{
     "wallet_address": "0xYourWalletAddressHere",
     "financialMetrics": {
@@ -572,28 +478,15 @@ export default function DocsPage() {
               ? ''
               : '"https://api-v2.idefi.ai/api/narrative",',
             activeTab === 'cURL'
-              ? '-H "Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json"'
+              ? 'Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json'
               : activeTab === 'JavaScript'
               ? '  method: "POST",\n  headers: {\n    Authorization: "Bearer {your_uid}",\n    "Content-Type": "application/json"\n  }'
               : 'headers={"Authorization": "Bearer {your_uid}", "Content-Type": "application/json"}',
             activeTab === 'cURL'
-              ? `-d '{"wallet_address": "0xYourWalletAddressHere", "financialMetrics": {"totalTransactions": 150, "transactionsByLayer": {"Layer1": 90, "Layer2": 60}, "interactingWallets": 45, "interactingWalletTransactions": 120, "mostActiveWallet": {"address": "0xDEF456", "transactionCount": 20}, "fraudRiskSummary": {"Low": 10, "Moderate": 25, "High": 10, "Flagged": 5}}, "date": "2024-12-01"}'`
+              ? '{"wallet_address": "0xYourWalletAddressHere"}'
               : activeTab === 'JavaScript'
-              ? `,\n  body: JSON.stringify({\n    wallet_address: "0xYourWalletAddressHere",\n    financialMetrics: {\n      totalTransactions: 150,\n      transactionsByLayer: { Layer1: 90, Layer2: 60 },\n      interactingWallets: 45,\n      interactingWalletTransactions: 120,\n      mostActiveWallet: { address: "0xDEF456", transactionCount: 20 },\n      fraudRiskSummary: { Low: 10, Moderate: 25, High: 10, Flagged: 5 },\n    },\n    date: "2024-12-01",\n  })\n}).then(res => res.json()).then(console.log);`
-              : `json={
-          "wallet_address": "0xYourWalletAddressHere",
-          "financialMetrics": {
-            "totalTransactions": 150,
-            "transactionsByLayer": { "Layer1": 90, "Layer2": 60 },
-            "interactingWallets": 45,
-            "interactingWalletTransactions": 120,
-            "mostActiveWallet": { "address": "0xDEF456", "transactionCount": 20 },
-            "fraudRiskSummary": { "Low": 10, "Moderate": 25, "High": 10, "Flagged": 5 }
-          },
-          "date": "2024-12-01"
-        }
-
-        print(response.json())`,
+              ? `{\n    wallet_address: "0xYourWalletAddressHere"}`
+              : `{"wallet_address": "0xYourWalletAddressHere"`,
 `{
   "narrative": "On 2024-12-01, wallet 0xYourWalletAddressHere recorded 150 transactions. Layer 1 networks accounted for 90 transactions, while Layer 2 networks contributed 60 transactions. The wallet interacted with 45 other wallets in 120 total transactions. The most active wallet interacting with this address was 0xDEF456, engaging in 20 transactions. Risk assessment flagged 5 wallets, with 10 wallets deemed high risk. Moderate and low-risk wallets totaled 25 and 10, respectively."
 }`,
@@ -614,21 +507,15 @@ export default function DocsPage() {
               ? ''
               : '"https://api-v2.idefi.ai/api/visualize",',
             activeTab === 'cURL'
-              ? '-H "Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json"'
+              ? 'Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json"'
               : activeTab === 'JavaScript'
               ? '  method: "POST",\n  headers: {\n    Authorization: "Bearer {your_uid}",\n    "Content-Type": "application/json"\n  }'
               : 'headers={"Authorization": "Bearer {your_uid}", "Content-Type": "application/json"}',
             activeTab === 'cURL'
-              ? `-d '{"wallet_address": "0xYourWalletAddressHere", "chain": "ethereum", "max_depth": 3}'`
+              ? '{"wallet_address": "0xYourWalletAddressHere"}'
               : activeTab === 'JavaScript'
-              ? `,\n  body: JSON.stringify({\n    wallet_address: "0xYourWalletAddressHere",\n    chain: "ethereum",\n    max_depth: 3,\n  })\n}).then(res => res.json()).then(console.log);`
-              : `json={
-          "wallet_address": "0xYourWalletAddressHere",
-          "chain": "ethereum",
-          "max_depth": 3
-        }
-
-        print(response.json())`,
+              ? `{\n    wallet_address: "0xYourWalletAddressHere",\n }`
+              : `{"wallet_address": "0xYourWalletAddressHere"}`,
 `{
    "family_tree_file": "/data/family_trees/0xYour...ess_family_tree.json",
    "visualization_url": "https://api-v2-idefi-ai.firebasestorage.app/visualizations/0xYour...ess_family_tree.html"
