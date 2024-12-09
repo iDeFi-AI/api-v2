@@ -10,8 +10,9 @@ import {
   faFlaskVial,
   faBook,
   faShieldAlt,
-  faCogs,
-  faDatabase,
+  faMessage,
+  faChartColumn,
+  faKey,
   faEye,
 } from '@fortawesome/free-solid-svg-icons';
 import { auth } from '@/utilities/firebaseClient';
@@ -22,26 +23,13 @@ const menuItems = [
   { icon: <FontAwesomeIcon icon={faFileCode} />, label: 'Devs', url: '/devs' },
   {
     icon: <FontAwesomeIcon icon={faFlaskVial} />,
-    label: 'Tools',
+    label: 'Examples',
     children: [
-      { icon: <FontAwesomeIcon icon={faEye} />, label: 'Origins', url: '/origins' },
-      { icon: <FontAwesomeIcon icon={faCogs} />, label: 'Metrics', url: '/metrics' },
-      { icon: <FontAwesomeIcon icon={faEye} />, label: 'Monitor', url: '/monitor' },
-      { icon: <FontAwesomeIcon icon={faShieldAlt} />, label: 'Firewall', url: '/firewall' },
-      { icon: <FontAwesomeIcon icon={faDatabase} />, label: 'Contracts', url: '/smartscan' },
-      { icon: <FontAwesomeIcon icon={faShieldAlt} />, label: 'DustCheck', url: '/undust' },
-      { icon: <FontAwesomeIcon icon={faEye} />, label: 'TxMapping', url: '/txmap' },
-      { icon: <FontAwesomeIcon icon={faEye} />, label: 'Fam Tree', url: '/visualize' },
-      { icon: <FontAwesomeIcon icon={faEye} />, label: 'Risk Tree', url: '/risk-visual' },
-
-    ],
-  },
-  {
-    icon: <FontAwesomeIcon icon={faFlaskVial} />,
-    label: 'Mini Apps',
-    children: [
-      { icon: <FontAwesomeIcon icon={faEye} />, label: 'V1 ', url: '/mini-app' },
-      { icon: <FontAwesomeIcon icon={faCogs} />, label: 'V2', url: '/mini-appv2' },
+      { icon: <FontAwesomeIcon icon={faKey} />, label: 'Origins', url: '/origins' },
+      { icon: <FontAwesomeIcon icon={faChartColumn} />, label: 'Metrics', url: '/metrics' },
+      { icon: <FontAwesomeIcon icon={faShieldAlt} />, label: 'Analyzers', url: '/analyze' },
+      { icon: <FontAwesomeIcon icon={faMessage} />, label: 'Narratives', url: '/narrative' },
+      { icon: <FontAwesomeIcon icon={faEye} />, label: 'Visualizers', url: '/visualize' },
     ],
   },
   { icon: null, label: 'Log out', url: '/' },

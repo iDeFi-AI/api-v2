@@ -2,13 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { auth } from '@/utilities/firebaseClient';
+import { callAiAssistant } from '@/utilities/GenAi';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 export default function DocsPage() {
   const [userUid, setUserUid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [genAiResponse, setGenAiResponse] = useState<string>('');
+  const [genAiLoading, setGenAiLoading] = useState(false);
+  const [genAiPrompt, setGenAiPrompt] = useState<string>('');
+  const [splitView, setSplitView] = useState(false); // New state for view toggle
+  const [activeTab, setActiveTab] = useState('curl'); // Default active tab
 
-  // Fetch UID on auth state change
+  const iframeSrc = '/family_trees.html'; // Example iframe if needed
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
@@ -30,15 +39,241 @@ export default function DocsPage() {
       .catch((err) => console.error('Error copying to clipboard:', err));
   };
 
+  const handleGenAiSubmit = async () => {
+    if (!genAiPrompt) return;
+
+    setGenAiLoading(true);
+    try {
+      const response = await callAiAssistant(genAiPrompt);
+      setGenAiResponse(response.trim() || 'No response received.');
+    } catch (err) {
+      console.error('Error generating AI response:', err);
+      setGenAiResponse('An error occurred while generating the response. Please try again.');
+    } finally {
+      setGenAiLoading(false);
+    }
+  };
+
+  const parseResponse = (response: string) => {
+    const sections = response.split(/```/); // Split response by code block markers
+    return sections.map((section, index) => {
+      const isCodeBlock = index % 2 !== 0; // Odd indices represent code blocks
+      const languageMatch = section.match(/^(\w+)/);
+      const language = languageMatch ? languageMatch[1] : 'text';
+
+      if (isCodeBlock) {
+        const codeContent = section.replace(/^(\w+)\n/, '');
+        return (
+          <div key={index} className="mb-4">
+            <SyntaxHighlighter language={language} style={tomorrow}>
+              {codeContent.trim()}
+            </SyntaxHighlighter>
+          </div>
+        );
+      }
+
+      // Plain text sections
+      return (
+        <p key={index} className="text-gray-300 leading-relaxed mb-4">
+          {section.trim().split('\n').map((line, idx) => (
+            <span key={idx}>
+              {line}
+              <br />
+            </span>
+          ))}
+        </p>
+      );
+    });
+  };
+
+  const examplePrompts = [
+    {
+      title: 'Fetch Origins',
+      endpoint: 'GET /api/origins',
+      prompt: `How can I fetch origins for a single wallet using GET /api/origins? Here is the request example you can copy:
+    
+  Method: GET
+  URL: https://api-v2.idefi.ai/api/origins?address=0xYourWalletAddressHere
+  Headers:
+  Authorization: Bearer {your_uid}
+  
+  How can I implement this in:
+  1. A Python Flask backend?
+  2. A JavaScript frontend?`,
+    },
+    {
+      title: 'Fetch Metrics',
+      endpoint: 'POST /api/metrics',
+      prompt: `How do I retrieve wallet metrics using POST /api/metrics? Here is the request example you can copy:
+  
+  Method: POST
+  URL: https://api-v2.idefi.ai/api/metrics
+  Headers:
+  Authorization: Bearer {your_uid}
+  Content-Type: application/json
+  Body:
+  {
+    "wallet_address": "0xYourWalletAddressHere",
+    "chains": ["ethereum", "polygon", "arbitrum", "optimism"]
+  }
+  
+  How can I implement this in:
+  1. A Python Flask backend?
+  2. A JavaScript frontend?`,
+    },
+    {
+      title: 'Generate Narrative',
+      endpoint: 'POST /api/narrative',
+      prompt: `How can I generate a professional financial report narrative using POST /api/narrative? Here is the request example:
+  
+  Method: POST
+  URL: https://api-v2.idefi.ai/api/narrative
+  Headers:
+  Authorization: Bearer {your_uid}
+  Content-Type: application/json
+  Body:
+  {
+    "wallet_address": "0xYourWalletAddressHere",
+    "financialMetrics": {
+      "totalTransactions": 150,
+      "transactionsByLayer": {
+        "Layer1": 90,
+        "Layer2": 60
+      },
+      "interactingWallets": 45,
+      "interactingWalletTransactions": 120,
+      "mostActiveWallet": {
+        "address": "0xDEF456",
+        "transactionCount": 20
+      },
+      "fraudRiskSummary": {
+        "Low": 10,
+        "Moderate": 25,
+        "High": 10,
+        "Flagged": 5
+      }
+    },
+    "date": "2024-12-01"
+  }
+  
+  How can I implement this in:
+  1. A Python Flask backend?
+  2. A JavaScript frontend?`,
+    },
+    {
+      title: 'Visualize Family Trees',
+      endpoint: 'POST /api/visualize',
+      prompt: `How can I generate and visualize wallet relationships using POST /api/visualize? Here is the request example:
+  
+  Method: POST
+  URL: https://api-v2.idefi.ai/api/visualize
+  Headers:
+  Authorization: Bearer {your_uid}
+  Content-Type: application/json
+  Body:
+  {
+    "wallet_address": "0xYourWalletAddressHere",
+    "chain": "ethereum",
+    "max_depth": 3
+  }
+  
+  How can I implement this in:
+  1. A Python Flask backend?
+  2. A JavaScript frontend?`,
+    },
+  ];
+
+   // Updated renderEndpointExample function to allow for splitView
+   const renderEndpointExample = (
+    title: string,
+    description: string,
+    method: string,
+    url: string,
+    headers: string,
+    body: string | null,
+    response: string,
+    status: number,
+    iframeSrc?: string
+  ) => (
+    <div className="bg-gray-700 p-4 rounded-md mb-6 relative">
+      <h3 className="text-white font-semibold mb-2">{title}</h3>
+      <p className="text-gray-400 mb-4">{description}</p>
+
+      <div className={splitView ? "grid grid-cols-2 gap-4" : "flex flex-col gap-4"}>
+  {/* Request Section */}
+  <div className="bg-gray-800 p-4 rounded-md text-sm relative">
+    <SyntaxHighlighter
+      language={activeTab === "cURL" ? "bash" : activeTab === "JavaScript" ? "javascript" : "python"}
+      style={tomorrow}
+    >
+      {activeTab === "cURL"
+        ? `${method} "${url}" \\\n-H "${headers}"${body ? ` \\\n-d '${body}'` : ''}`
+        : activeTab === "JavaScript"
+        ? `fetch("${url}", {\n  method: "${method}",\n  headers: {\n    ${headers.replace(
+            /: /g,
+            ': "'
+          )}",\n  },${body ? `\n  body: JSON.stringify(${body}),` : ''}\n}).then(res => res.json()).then(console.log);`
+        : `import requests\n\nresponse = requests.${method.toLowerCase()}(\n  "${url}",\n  headers={${headers.replace(
+            /: /g,
+            ': "'
+          )}},${body ? `\n  json=${body},` : ''}\n)\nprint(response.json())`}
+    </SyntaxHighlighter>
+    <button
+      className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
+      onClick={() =>
+        copyToClipboard(
+          activeTab === "cURL"
+            ? `${method} "${url}" \\\n-H "${headers}"${body ? ` \\\n-d '${body}'` : ''}`
+            : activeTab === "JavaScript"
+            ? `fetch("${url}", {\n  method: "${method}",\n  headers: {\n    ${headers.replace(
+                /: /g,
+                ': "'
+              )}",\n  },${body ? `\n  body: JSON.stringify(${body}),` : ''}\n}).then(res => res.json()).then(console.log);`
+            : `import requests\n\nresponse = requests.${method.toLowerCase()}(\n  "${url}",\n  headers={${headers.replace(
+                /: /g,
+                ': "'
+              )}},${body ? `\n  json=${body},` : ''}\n)\nprint(response.json())`
+        )
+      }
+    >
+      Copy Request
+    </button>
+  </div>
+
+  {/* Response Section */}
+  <div className="bg-gray-800 p-4 rounded-md text-sm relative">
+    <p className="text-green-400 mb-2">Response ({status}):</p>
+    <SyntaxHighlighter language="json" style={tomorrow}>
+      {response}
+    </SyntaxHighlighter>
+    <button
+      className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
+      onClick={() => copyToClipboard(response)}
+    >
+      Copy Response
+    </button>
+  </div>
+</div>
+
+
+      {iframeSrc && (
+        <div className="mt-8">
+          <h2 className="text-xl text-neorange font-bold mb-4">Visual Example</h2>
+          <iframe
+            src={iframeSrc}
+            title="Family Tree Visualization"
+            className="w-full h-[800px] border-2 border-gray-700 rounded-md"
+          ></iframe>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <main className="rounded flex flex-col items-center min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white px-4 py-8">
-      <div className="w-full max-w-4xl bg-gray-800 p-6 rounded-lg shadow-md">
+      <div className="w-full max-w-6xl bg-gray-800 p-6 rounded-lg shadow-md relative">
         <h1 className="text-3xl text-neorange font-bold text-center mb-6">API Documentation</h1>
-        <p className="text-lg text-center mb-6">
-          Learn how to integrate with our APIs using your User ID (UID).
-        </p>
 
-        {/* UID Section */}
         {loading ? (
           <p className="text-center text-gray-400">Loading your details...</p>
         ) : error ? (
@@ -62,148 +297,345 @@ export default function DocsPage() {
                     Copy
                   </button>
                 </div>
-                <p className="text-sm sm:text-base text-gray-400">
-                  Use your UID to authenticate API requests.
-                </p>
               </div>
             )}
 
-            {/* API Usage Examples */}
-            <div className="mt-8">
-              <h2 className="text-xl text-neorange font-bold mb-4">API Usage Examples</h2>
-              <div className="grid grid-cols-1 gap-6">
-                {/* Curl Example */}
-                <div className="bg-gray-700 rounded-md p-4 overflow-auto relative">
-                  <h3 className="font-bold text-white mb-2">Curl Example:</h3>
-                  <code className="block whitespace-pre-wrap">
-                    {`curl -X POST https://api-v2.idefi.ai/api/turnqey_report \\
--H "Content-Type: application/json" \\
--H "Authorization: Bearer ${userUid}" \\
--d '{"wallet_address": "0xBcB42948c56906eAd635fC268653aD5286d8b88B"}'`}
-                  </code>
-                  <button
-                    className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
-                    onClick={() =>
-                      copyToClipboard(
-                        `curl -X POST https://api-v2.idefi.ai/api/turnqey_report \\
--H "Content-Type: application/json" \\
--H "Authorization: Bearer ${userUid}" \\
--d '{"wallet_address": "0xBcB42948c56906eAd635fC268653aD5286d8b88B"}'`
-                      )
-                    }
-                  >
-                    Copy
-                  </button>
-                </div>
+            {/* GenAI Assistant Section */}
+            <div className="mt-8 bg-gray-900 p-6 rounded-lg">
+              <h2 className="text-xl text-neorange font-bold mb-4">GenAI Assistant</h2>
+              <div className="mb-4">
+                <ul className="list-disc list-inside text-gray-400">
+                  {examplePrompts.map((example, idx) => (
+                    <li key={idx} className="mb-2">
+                      <button
+                        className="text-blue-400 hover:underline"
+                        onClick={() => setGenAiPrompt(example.prompt)}
+                      >
+                        {example.title}
+                      </button>{' '}
+                      - <span>{example.endpoint}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <textarea
+                className="w-full bg-gray-700 rounded-md p-4 text-sm text-white mb-4"
+                rows={4}
+                placeholder="Type a question or click an example prompt..."
+                value={genAiPrompt}
+                onChange={(e) => setGenAiPrompt(e.target.value)}
+              ></textarea>
 
-                {/* JavaScript Example */}
-                <div className="bg-gray-700 rounded-md p-4 overflow-auto relative">
-                  <h3 className="font-bold text-white mb-2">JavaScript Example:</h3>
-                  <code className="block whitespace-pre-wrap">
-                    {`fetch('https://api-v2.idefi.ai/api/turnqey_report', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer ${userUid}',
-  },
-  body: JSON.stringify({ wallet_address: '0xBcB42948c56906eAd635fC268653aD5286d8b88B' }),
-})
-  .then(response => response.json())
-  .then(data => console.log(data))
-  .catch(error => console.error('Error:', error));`}
-                  </code>
-                  <button
-                    className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
-                    onClick={() =>
-                      copyToClipboard(
-                        `fetch('https://api-v2.idefi.ai/api/turnqey_report', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer ${userUid}',
-  },
-  body: JSON.stringify({ wallet_address: '0xBcB42948c56906eAd635fC268653aD5286d8b88B' }),
-})
-  .then(response => response.json())
-  .then(data => console.log(data))
-  .catch(error => console.error('Error:', error));`
-                      )
-                    }
-                  >
-                    Copy
-                  </button>
-                </div>
+              <div className="bg-gray-800 p-6 rounded-md text-sm text-white">
+                {genAiResponse && (
+                  <>
+                    <div className="mb-4">
+                      <h3 className="font-bold text-green-400">GenAI Response:</h3>
+                      <div className="space-y-4">{parseResponse(genAiResponse)}</div>
+                    </div>
+                    <div className="flex flex-wrap gap-4">
+                      <button
+                        className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md"
+                        onClick={() => copyToClipboard(genAiResponse)}
+                      >
+                        Copy Full Response
+                      </button>
+                      <button
+                        className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md"
+                        onClick={() => setGenAiResponse('')}
+                      >
+                        Clear Response
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex justify-end mt-4">
+                <button
+                  className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md"
+                  onClick={handleGenAiSubmit}
+                  disabled={genAiLoading}
+                >
+                  {genAiLoading ? 'Generating...' : genAiResponse ? 'Submit Again' : 'Submit'}
+                </button>
               </div>
             </div>
 
-            {/* Response Examples */}
-            <div className="mt-8">
-              <h2 className="text-xl text-neorange font-bold mb-4">Response Examples</h2>
-              <div className="grid grid-cols-1 gap-6">
-                {/* Metrics Response */}
-                <div className="bg-gray-700 rounded-md p-4 overflow-auto relative">
-                  <h3 className="font-bold text-green-500 mb-2">Metrics Example:</h3>
-                  <code className="block whitespace-pre-wrap text-green-400">
-                    {`{
-  "wallet_address": "0xBcB42948c56906eAd635fC268653aD5286d8b88B",
-  "metrics": {
-    "totalTransactions": 142,
-    "transactionsByChain": {
-      "Ethereum": 92,
-      "Polygon": 50
-    },
-    "interactingWallets": 85,
-    "interactingWalletTransactions": 120,
-    "mostActiveWallet": {
-      "address": "0xAbC1234567890",
-      "transactionCount": 24
-    }
-  }
-}`}
-                  </code>
-                  <button
-                    className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
-                    onClick={() =>
-                      copyToClipboard(`{
-  "wallet_address": "0xBcB42948c56906eAd635fC268653aD5286d8b88B",
-  "metrics": {
-    "totalTransactions": 142,
-    "transactionsByChain": {
-      "Ethereum": 92,
-      "Polygon": 50
-    },
-    "interactingWallets": 85,
-    "interactingWalletTransactions": 120,
-    "mostActiveWallet": {
-      "address": "0xAbC1234567890",
-      "transactionCount": 24
-    }
-  }
-}`)
-                    }
-                  >
-                    Copy
-                  </button>
-                </div>
-
-                {/* Narrative Response */}
-                <div className="bg-gray-700 rounded-md p-4 overflow-auto relative">
-                  <h3 className="font-bold text-yellow-500 mb-2">Narrative Example:</h3>
-                  <code className="block whitespace-pre-wrap text-yellow-400">
-                    {`"Based on the transaction history, this wallet demonstrates consistent activity across Ethereum and Polygon networks, with 142 total transactions. It has engaged with 85 unique wallets, suggesting a high level of interconnectivity. However, some associated wallets exhibit a moderate fraud risk, necessitating cautious further analysis. The most active wallet interaction accounted for 24 transactions, indicating a potential strategic relationship."`}
-                  </code>
-                  <button
-                    className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded"
-                    onClick={() =>
-                      copyToClipboard(
-                        `"Based on the transaction history, this wallet demonstrates consistent activity across Ethereum and Polygon networks, with 142 total transactions. It has engaged with 85 unique wallets, suggesting a high level of interconnectivity. However, some associated wallets exhibit a moderate fraud risk, necessitating cautious further analysis. The most active wallet interaction accounted for 24 transactions, indicating a potential strategic relationship."`
-                      )
-                    }
-                  >
-                    Copy
-                  </button>
+            {/* Title for Endpoints */}
+            <div className="mt-8 flex items-center justify-between">
+              <h2 className="text-xl text-neorange font-bold">Endpoints</h2>
+              {/* Toggle View Button with Tooltip and Icons */}
+              <div className="relative group">
+                <button
+                  className="bg-gray-600 hover:bg-gray-700 text-white p-2 rounded-full focus:outline-none focus:ring focus:ring-orange-300"
+                  onClick={() => setSplitView(!splitView)}
+                >
+                  {splitView ? (
+                    // Heroicon: Bars3Icon (For single column)
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3.75 5.25h16.5M3.75 12h16.5m-16.5 6.75h16.5"
+                      />
+                    </svg>
+                  ) : (
+                    // Heroicon: ViewColumnsIcon (For double column)
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9.75 3.75h10.5v16.5H9.75zM3.75 3.75h4.5v16.5h-4.5z"
+                      />
+                    </svg>
+                  )}
+                </button>
+                <div className="absolute bottom-10 right-0 bg-gray-800 text-white text-xs rounded-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  {splitView ? 'Single Column' : 'Double Column'}
                 </div>
               </div>
+            </div>
+            {/* API Endpoints */}
+            <div className="mt-6">
+            {/* Tabs for Language Selection */}
+            <div className="flex items-center justify-center gap-4 mb-4">
+                {['cURL', 'JavaScript', 'Python'].map((language) => (
+                  <button
+                    key={language}
+                    className={`p-2 px-4 rounded-md ${
+                      activeTab === language ? 'bg-neorange text-white' : 'bg-gray-600 text-gray-200'
+                    }`}
+                    onClick={() => setActiveTab(language)}
+                  >
+                    {language}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* API Endpoints */}
+            <div>
+            {renderEndpointExample(
+            'GET /api/origins',
+            'Fetch origins for a single wallet address.',
+            // For each activeTab, we provide a snippet reflecting that language:
+            activeTab === 'cURL'
+              ? 'curl -X GET'
+              : activeTab === 'JavaScript'
+              ? 'fetch("https://api-v2.idefi.ai/api/origins?address=0xYourWalletAddressHere", {'
+              : 'import requests\n\nresponse = requests.get(',
+            activeTab === 'cURL'
+              ? 'https://api-v2.idefi.ai/api/origins?address=0xYourWalletAddressHere'
+              : activeTab === 'JavaScript'
+              ? ''
+              : '"https://api-v2.idefi.ai/api/origins?address=0xYourWalletAddressHere",',
+            activeTab === 'cURL'
+              ? '-H "Authorization: Bearer {your_uid}"'
+              : activeTab === 'JavaScript'
+              ? '  method: "GET",\n  headers: { Authorization: "Bearer {your_uid}" }'
+              : 'headers={"Authorization": "Bearer {your_uid}"}',
+            activeTab === 'cURL'
+              ? ''
+              : activeTab === 'JavaScript'
+              ? '}).then(res => res.json()).then(console.log);'
+              : 'print(response.json())',
+`{
+  "address": "0xYourWalletAddressHere",
+  "known_origins": [
+      {
+        "transaction_hash": "0xTransactionHash",
+        "origin_name": "Origin Contract",
+        "origin_type": "DeFi",
+        "origin_address": "0xOriginAddress"
+      }
+    ],
+  "transactions": [...]
+}`,
+            200
+          )}
+
+          {renderEndpointExample(
+            'POST /api/origins',
+            'Fetch origins for multiple wallet addresses.',
+            activeTab === 'cURL'
+              ? 'curl -X POST'
+              : activeTab === 'JavaScript'
+              ? 'fetch("https://api-v2.idefi.ai/api/origins", {'
+              : 'import requests\n\nresponse = requests.post(',
+            activeTab === 'cURL'
+              ? 'https://api-v2.idefi.ai/api/origins'
+              : activeTab === 'JavaScript'
+              ? ''
+              : '"https://api-v2.idefi.ai/api/origins",',
+            activeTab === 'cURL'
+              ? '-H "Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json"'
+              : activeTab === 'JavaScript'
+              ? '  method: "POST",\n  headers: {\n    Authorization: "Bearer {your_uid}",\n    "Content-Type": "application/json"\n  }'
+              : 'headers={"Authorization": "Bearer {your_uid}", "Content-Type": "application/json"}',
+            activeTab === 'cURL'
+              ? '-d \'{"addresses": ["0xAddress1", "0xAddress2"]}\''
+              : activeTab === 'JavaScript'
+              ? ',\n  body: JSON.stringify({ addresses: ["0xAddress1", "0xAddress2"] })\n}).then(res => res.json()).then(console.log);'
+              : 'json={"addresses": ["0xAddress1", "0xAddress2"]}\n\nprint(response.json())',
+`{
+  "results": [
+    {
+      "address": "0xAddress1",
+      "known_origins": [...],
+      "transactions": [...]
+    },
+    {
+      "address": "0xAddress2",
+      "known_origins": [...],
+      "transactions": [...]
+    }
+  ]
+}`,
+            200
+          )}
+
+          {renderEndpointExample(
+            'POST /api/metrics',
+            'Fetch wallet metrics including Layer 1 and Layer 2 breakdowns, interacting wallets, and fraud risk analysis.',
+            activeTab === 'cURL'
+              ? 'curl -X POST'
+              : activeTab === 'JavaScript'
+              ? 'fetch("https://api-v2.idefi.ai/api/metrics", {'
+              : 'import requests\n\nresponse = requests.post(',
+            activeTab === 'cURL'
+              ? 'https://api-v2.idefi.ai/api/metrics'
+              : activeTab === 'JavaScript'
+              ? ''
+              : '"https://api-v2.idefi.ai/api/metrics",',
+            activeTab === 'cURL'
+              ? '-H "Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json"'
+              : activeTab === 'JavaScript'
+              ? '  method: "POST",\n  headers: {\n    Authorization: "Bearer {your_uid}",\n    "Content-Type": "application/json"\n  }'
+              : 'headers={"Authorization": "Bearer {your_uid}", "Content-Type": "application/json"}',
+            activeTab === 'cURL'
+              ? '-d \'{"wallet_address": "0xYourWalletAddressHere", "chains": ["ethereum", "polygon", "arbitrum", "optimism"]}\''
+              : activeTab === 'JavaScript'
+              ? ',\n  body: JSON.stringify({\n    wallet_address: "0xYourWalletAddressHere",\n    chains: ["ethereum", "polygon", "arbitrum", "optimism"],\n  })\n}).then(res => res.json()).then(console.log);'
+              : 'json={"wallet_address": "0xYourWalletAddressHere", "chains": ["ethereum", "polygon", "arbitrum", "optimism"]}\n\nprint(response.json())',
+`{
+    "wallet_address": "0xYourWalletAddressHere",
+    "financialMetrics": {
+    "totalTransactions": 250,
+    "transactionsByChain": {
+    "ethereum": 120,
+    "polygon": 80,
+    "arbitrum": 30,
+    "optimism": 20
+    },
+      "transactionsByLayer": {
+      "Layer1": 200,
+      "Layer2": 50
+    },
+      "interactingWallets": 85,
+      "fraudRiskSummary": {
+      "Low": 40,
+      "Moderate": 30,
+      "High": 10,
+      "Flagged": 5
+    }
+  }
+}`,
+            200
+          )}
+
+          {renderEndpointExample(
+            'POST /api/narrative',
+            'Generate a professional financial report narrative based on wallet metrics.',
+            activeTab === 'cURL'
+              ? 'curl -X POST'
+              : activeTab === 'JavaScript'
+              ? 'fetch("https://api-v2.idefi.ai/api/narrative", {'
+              : 'import requests\n\nresponse = requests.post(',
+            activeTab === 'cURL'
+              ? 'https://api-v2.idefi.ai/api/narrative'
+              : activeTab === 'JavaScript'
+              ? ''
+              : '"https://api-v2.idefi.ai/api/narrative",',
+            activeTab === 'cURL'
+              ? '-H "Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json"'
+              : activeTab === 'JavaScript'
+              ? '  method: "POST",\n  headers: {\n    Authorization: "Bearer {your_uid}",\n    "Content-Type": "application/json"\n  }'
+              : 'headers={"Authorization": "Bearer {your_uid}", "Content-Type": "application/json"}',
+            activeTab === 'cURL'
+              ? `-d '{"wallet_address": "0xYourWalletAddressHere", "financialMetrics": {"totalTransactions": 150, "transactionsByLayer": {"Layer1": 90, "Layer2": 60}, "interactingWallets": 45, "interactingWalletTransactions": 120, "mostActiveWallet": {"address": "0xDEF456", "transactionCount": 20}, "fraudRiskSummary": {"Low": 10, "Moderate": 25, "High": 10, "Flagged": 5}}, "date": "2024-12-01"}'`
+              : activeTab === 'JavaScript'
+              ? `,\n  body: JSON.stringify({\n    wallet_address: "0xYourWalletAddressHere",\n    financialMetrics: {\n      totalTransactions: 150,\n      transactionsByLayer: { Layer1: 90, Layer2: 60 },\n      interactingWallets: 45,\n      interactingWalletTransactions: 120,\n      mostActiveWallet: { address: "0xDEF456", transactionCount: 20 },\n      fraudRiskSummary: { Low: 10, Moderate: 25, High: 10, Flagged: 5 },\n    },\n    date: "2024-12-01",\n  })\n}).then(res => res.json()).then(console.log);`
+              : `json={
+          "wallet_address": "0xYourWalletAddressHere",
+          "financialMetrics": {
+            "totalTransactions": 150,
+            "transactionsByLayer": { "Layer1": 90, "Layer2": 60 },
+            "interactingWallets": 45,
+            "interactingWalletTransactions": 120,
+            "mostActiveWallet": { "address": "0xDEF456", "transactionCount": 20 },
+            "fraudRiskSummary": { "Low": 10, "Moderate": 25, "High": 10, "Flagged": 5 }
+          },
+          "date": "2024-12-01"
+        }
+
+        print(response.json())`,
+`{
+  "narrative": "On 2024-12-01, wallet 0xYourWalletAddressHere recorded 150 transactions. Layer 1 networks accounted for 90 transactions, while Layer 2 networks contributed 60 transactions. The wallet interacted with 45 other wallets in 120 total transactions. The most active wallet interacting with this address was 0xDEF456, engaging in 20 transactions. Risk assessment flagged 5 wallets, with 10 wallets deemed high risk. Moderate and low-risk wallets totaled 25 and 10, respectively."
+}`,
+            200
+          )}
+
+          {renderEndpointExample(
+            'POST /api/visualize',
+            'Generate and visualize wallet relationships as an interactive graph.',
+            activeTab === 'cURL'
+              ? 'curl -X POST'
+              : activeTab === 'JavaScript'
+              ? 'fetch("https://api-v2.idefi.ai/api/visualize", {'
+              : 'import requests\n\nresponse = requests.post(',
+            activeTab === 'cURL'
+              ? 'https://api-v2.idefi.ai/api/visualize'
+              : activeTab === 'JavaScript'
+              ? ''
+              : '"https://api-v2.idefi.ai/api/visualize",',
+            activeTab === 'cURL'
+              ? '-H "Authorization: Bearer {your_uid}"\n-H "Content-Type: application/json"'
+              : activeTab === 'JavaScript'
+              ? '  method: "POST",\n  headers: {\n    Authorization: "Bearer {your_uid}",\n    "Content-Type": "application/json"\n  }'
+              : 'headers={"Authorization": "Bearer {your_uid}", "Content-Type": "application/json"}',
+            activeTab === 'cURL'
+              ? `-d '{"wallet_address": "0xYourWalletAddressHere", "chain": "ethereum", "max_depth": 3}'`
+              : activeTab === 'JavaScript'
+              ? `,\n  body: JSON.stringify({\n    wallet_address: "0xYourWalletAddressHere",\n    chain: "ethereum",\n    max_depth: 3,\n  })\n}).then(res => res.json()).then(console.log);`
+              : `json={
+          "wallet_address": "0xYourWalletAddressHere",
+          "chain": "ethereum",
+          "max_depth": 3
+        }
+
+        print(response.json())`,
+`{
+   "family_tree_file": "/data/family_trees/0xYour...ess_family_tree.json",
+   "visualization_url": "https://api-v2-idefi-ai.firebasestorage.app/visualizations/0xYour...ess_family_tree.html"
+}`,
+            200,
+            '/family_trees.html'
+          )}
             </div>
           </>
         )}

@@ -4,8 +4,8 @@ import * as React from 'react'
 import Header from '@/components/layouts/Header'
 
 export const metadata: Metadata = {
-  title: 'Visualize',
-  description: 'Visualizing',
+  title: 'Analyze Risk',
+  description: 'Check Flagged Database',
 }
 
 const MainLayout: React.FC<React.PropsWithChildren> = ({ children }) => {

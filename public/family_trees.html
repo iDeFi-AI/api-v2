@@ -1,0 +1,80 @@
+<html>
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" type="text/css" />
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"> </script>
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+
+<style type="text/css">
+
+        #mynetwork {
+            width: 100%;
+            height: 800px;
+            background-color: #1e1e1e;
+            border: 1px solid lightgray;
+            position: relative;
+            float: left;
+        }
+
+        
+
+        
+
+        
+</style>
+
+</head>
+
+<body>
+<div id = "mynetwork"></div>
+
+
+<script type="text/javascript">
+
+    // initialize global variables.
+    var edges;
+    var nodes;
+    var network; 
+    var container;
+    var options, data;
+
+    
+    // This method is responsible for drawing the graph, returns the drawn network
+    function drawGraph() {
+        var container = document.getElementById('mynetwork');
+        
+        
+
+        // parsing and collecting nodes and edges from the python
+        nodes = new vis.DataSet([{"color": "#FFD700", "font": {"color": "white"}, "id": "0xGrandparent1", "label": "0xGrandparent1", "shape": "star", "size": 25, "title": "Grandparent Wallet: 0xGrandparent1"}, {"color": "#1f77b4", "font": {"color": "white"}, "id": "0xParent1_00", "label": "0xParent1_00", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent1_00"}, {"color": "#1f77b4", "font": {"color": "white"}, "id": "0xParent1_01", "label": "0xParent1_01", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent1_01"}, {"color": "#1f77b4", "font": {"color": "white"}, "id": "0xParent1_02", "label": "0xParent1_02", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent1_02"}, {"color": "#1f77b4", "font": {"color": "white"}, "id": "0xParent1_03", "label": "0xParent1_03", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent1_03"}, {"color": "#1f77b4", "font": {"color": "white"}, "id": "0xParent1_04", "label": "0xParent1_04", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent1_04"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_00", "label": "0xChild1_00", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_00"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_01", "label": "0xChild1_01", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_01"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_02", "label": "0xChild1_02", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_02"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_03", "label": "0xChild1_03", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_03"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_04", "label": "0xChild1_04", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_04"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_05", "label": "0xChild1_05", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_05"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_06", "label": "0xChild1_06", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_06"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_07", "label": "0xChild1_07", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_07"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_08", "label": "0xChild1_08", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_08"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_09", "label": "0xChild1_09", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_09"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_10", "label": "0xChild1_10", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_10"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_11", "label": "0xChild1_11", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_11"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_12", "label": "0xChild1_12", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_12"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_13", "label": "0xChild1_13", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_13"}, {"color": "#2ca02c", "font": {"color": "white"}, "id": "0xChild1_14", "label": "0xChild1_14", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild1_14"}, {"color": "#FF5733", "font": {"color": "white"}, "id": "0xGrandparent2", "label": "0xGrandparent2", "shape": "star", "size": 25, "title": "Grandparent Wallet: 0xGrandparent2"}, {"color": "#3498db", "font": {"color": "white"}, "id": "0xParent2_00", "label": "0xParent2_00", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent2_00"}, {"color": "#3498db", "font": {"color": "white"}, "id": "0xParent2_01", "label": "0xParent2_01", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent2_01"}, {"color": "#3498db", "font": {"color": "white"}, "id": "0xParent2_02", "label": "0xParent2_02", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent2_02"}, {"color": "#3498db", "font": {"color": "white"}, "id": "0xParent2_03", "label": "0xParent2_03", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent2_03"}, {"color": "#3498db", "font": {"color": "white"}, "id": "0xParent2_04", "label": "0xParent2_04", "shape": "circle", "size": 15, "title": "Parent Wallet: 0xParent2_04"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_00", "label": "0xChild2_00", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_00"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_01", "label": "0xChild2_01", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_01"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_02", "label": "0xChild2_02", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_02"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_03", "label": "0xChild2_03", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_03"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_04", "label": "0xChild2_04", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_04"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_05", "label": "0xChild2_05", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_05"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_06", "label": "0xChild2_06", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_06"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_07", "label": "0xChild2_07", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_07"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_08", "label": "0xChild2_08", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_08"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_09", "label": "0xChild2_09", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_09"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_10", "label": "0xChild2_10", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_10"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_11", "label": "0xChild2_11", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_11"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_12", "label": "0xChild2_12", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_12"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_13", "label": "0xChild2_13", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_13"}, {"color": "#27ae60", "font": {"color": "white"}, "id": "0xChild2_14", "label": "0xChild2_14", "shape": "circle", "size": 10, "title": "Child Wallet: 0xChild2_14"}]);
+        edges = new vis.DataSet([{"from": "0xGrandparent1", "to": "0xParent1_00"}, {"from": "0xGrandparent1", "to": "0xParent1_01"}, {"from": "0xGrandparent1", "to": "0xParent1_02"}, {"from": "0xGrandparent1", "to": "0xParent1_03"}, {"from": "0xGrandparent1", "to": "0xParent1_04"}, {"from": "0xParent1_00", "to": "0xChild1_00"}, {"from": "0xParent1_00", "to": "0xChild1_01"}, {"from": "0xParent1_00", "to": "0xChild1_02"}, {"from": "0xParent1_01", "to": "0xChild1_03"}, {"from": "0xParent1_01", "to": "0xChild1_04"}, {"from": "0xParent1_01", "to": "0xChild1_05"}, {"from": "0xParent1_02", "to": "0xChild1_06"}, {"from": "0xParent1_02", "to": "0xChild1_07"}, {"from": "0xParent1_02", "to": "0xChild1_08"}, {"from": "0xParent1_03", "to": "0xChild1_09"}, {"from": "0xParent1_03", "to": "0xChild1_10"}, {"from": "0xParent1_03", "to": "0xChild1_11"}, {"from": "0xParent1_04", "to": "0xChild1_12"}, {"from": "0xParent1_04", "to": "0xChild1_13"}, {"from": "0xParent1_04", "to": "0xChild1_14"}, {"from": "0xGrandparent2", "to": "0xParent2_00"}, {"from": "0xGrandparent2", "to": "0xParent2_01"}, {"from": "0xGrandparent2", "to": "0xParent2_02"}, {"from": "0xGrandparent2", "to": "0xParent2_03"}, {"from": "0xGrandparent2", "to": "0xParent2_04"}, {"from": "0xParent2_00", "to": "0xChild2_00"}, {"from": "0xParent2_00", "to": "0xChild2_01"}, {"from": "0xParent2_00", "to": "0xChild2_02"}, {"from": "0xParent2_01", "to": "0xChild2_03"}, {"from": "0xParent2_01", "to": "0xChild2_04"}, {"from": "0xParent2_01", "to": "0xChild2_05"}, {"from": "0xParent2_02", "to": "0xChild2_06"}, {"from": "0xParent2_02", "to": "0xChild2_07"}, {"from": "0xParent2_02", "to": "0xChild2_08"}, {"from": "0xParent2_03", "to": "0xChild2_09"}, {"from": "0xParent2_03", "to": "0xChild2_10"}, {"from": "0xParent2_03", "to": "0xChild2_11"}, {"from": "0xParent2_04", "to": "0xChild2_12"}, {"from": "0xParent2_04", "to": "0xChild2_13"}, {"from": "0xParent2_04", "to": "0xChild2_14"}, {"color": "#FFC300", "from": "0xParent1_00", "title": "Interaction: 0xParent1_00 \u2194 0xParent2_01", "to": "0xParent2_01"}, {"color": "#FFC300", "from": "0xChild1_03", "title": "Interaction: 0xChild1_03 \u2194 0xChild2_07", "to": "0xChild2_07"}, {"color": "#FFC300", "from": "0xGrandparent1", "title": "Interaction: 0xGrandparent1 \u2194 0xGrandparent2", "to": "0xGrandparent2"}]);
+
+        // adding nodes and edges to the graph
+        data = {nodes: nodes, edges: edges};
+
+        var options = {"physics": {"stabilization": {"enabled": true, "iterations": 1000}, "solver": "forceAtlas2Based", "forceAtlas2Based": {"gravitationalConstant": -100, "centralGravity": 0.01, "springLength": 200, "springConstant": 0.05, "damping": 0.8, "avoidOverlap": 1.5}}, "interaction": {"hover": true, "tooltipDelay": 100, "hideEdgesOnDrag": false, "navigationButtons": true}, "nodes": {"borderWidth": 1, "borderWidthSelected": 2}};
+        
+        
+
+        
+
+        network = new vis.Network(container, data, options);
+	 
+        
+
+
+        
+
+        return network;
+
+    }
+
+    drawGraph();
+
+</script>
+</body>
+</html>

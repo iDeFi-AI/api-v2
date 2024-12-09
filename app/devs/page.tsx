@@ -48,7 +48,6 @@ export default function DeveloperPortal() {
 
       const newKey = await createApiKey(user.uid);
       setUserApiKeys((prevKeys) => [...prevKeys, newKey]);
-
       setError('');
     } catch (err) {
       console.error('Error generating API key:', err);
@@ -67,7 +66,6 @@ export default function DeveloperPortal() {
 
       const updatedKeys = await deleteApiKey(user.uid, keyToDelete);
       setUserApiKeys(updatedKeys);
-
       setError('');
     } catch (err) {
       console.error('Error deleting API key:', err);
@@ -86,7 +84,7 @@ export default function DeveloperPortal() {
   };
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white px-4 py-8">
+    <main className="rounded flex flex-col items-center min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 text-white px-4 py-8">
       <div className="w-full max-w-4xl bg-gray-800 p-6 rounded-lg shadow-md">
         <h1 className="text-3xl text-neorange font-bold text-center mb-6">Developer Portal</h1>
         <p className="text-lg text-center mb-6">
@@ -122,7 +120,10 @@ export default function DeveloperPortal() {
           <h2 className="text-xl text-neorange font-bold mb-4">Your API Keys</h2>
           {userApiKeys.length > 0 ? (
             userApiKeys.map((key, index) => (
-              <div key={index} className="flex items-center border border-gray-400 rounded-md p-2 mb-4 bg-gray-700">
+              <div
+                key={index}
+                className="flex items-center border border-gray-400 rounded-md p-2 mb-4 bg-gray-700"
+              >
                 <input
                   type="text"
                   className="flex-grow bg-transparent text-white text-sm sm:text-base outline-none"
@@ -147,7 +148,8 @@ export default function DeveloperPortal() {
           ) : (
             <p className="text-sm sm:text-base text-gray-400">
              Only generate an API key if you're working with more than one project.
-            </p>          )}
+            </p>
+          )}
           {error && <p className="text-red-500 mt-4">{error}</p>}
         </div>
 
@@ -159,6 +161,16 @@ export default function DeveloperPortal() {
         >
           {loading ? 'Generating...' : 'Generate New API Key'}
         </button>
+
+        {/* Support Section */}
+        <div className="mt-8 text-center">
+          <p className="text-sm sm:text-base text-gray-400">
+            Having issues with the tooling or the platform? Please reach out to{' '}
+            <a href="mailto:k3m@idefi.ai" className="text-blue-400 underline">
+              k3m@idefi.ai
+            </a>.
+          </p>
+        </div>
       </div>
     </main>
   );

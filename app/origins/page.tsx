@@ -171,7 +171,7 @@ const OriginsCheck: React.FC = () => {
             onClick={handleAddAddress}
             className="bg-neorange text-black font-bold px-4 py-2 rounded-md hover:bg-orange-500 transition focus:outline-none focus:ring focus:ring-orange-300"
           >
-            Add Address
+            Add + 
           </button>
         </div>
 

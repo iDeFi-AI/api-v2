@@ -3,22 +3,50 @@ import json
 
 def get_endpoints():
     """
-    Consolidated metadata for all API endpoints.
+    Consolidated metadata for all API endpoints currently implemented.
     """
     endpoints = [
-        {"endpoint": "/api/get_flagged_addresses", "methods": ["GET"], "description": "Fetches flagged wallet addresses"},
-        {"endpoint": "/api/checkaddress", "methods": ["GET", "POST"], "description": "Validates wallet addresses"},
-        {"endpoint": "/api/generate_gpt_analysis", "methods": ["POST"], "description": "Generates GPT-based analysis"},
-        {"endpoint": "/api/upload", "methods": ["POST"], "description": "Uploads a file for processing"},
-        {"endpoint": "/api/download/<filename>", "methods": ["GET"], "description": "Downloads processed files"},
-        {"endpoint": "/api/get_all_tokens", "methods": ["GET"], "description": "Fetches all API tokens for the user"},
-        {"endpoint": "/api/validate_user", "methods": ["POST"], "description": "Validates Firebase user credentials"},
-        {"endpoint": "/api/basic_metrics", "methods": ["GET"], "description": "Fetches basic metrics for a wallet"},
-        {"endpoint": "/api/advanced_metrics", "methods": ["GET"], "description": "Fetches advanced metrics for a wallet"},
-        {"endpoint": "/api/visualize_dataset", "methods": ["POST"], "description": "Visualizes datasets from files or addresses"},
-        {"endpoint": "/api/transaction_summary", "methods": ["GET", "POST"], "description": "Provides a summary of transactions for a wallet"},
-        {"endpoint": "/api/analyze_smart_contract", "methods": ["POST"], "description": "Analyzes Solidity smart contracts for issues"},
-        {"endpoint": "/api/origins", "methods": ["GET", "POST"], "description": "Fetches origin data for wallet addresses"},
+        {
+            "endpoint": "/api/health",
+            "methods": ["GET"],
+            "description": "Returns the health status of the API and its endpoints."
+        },
+        {
+            "endpoint": "/api/get_flagged_addresses",
+            "methods": ["GET"],
+            "description": "Serve flagged addresses dataset dynamically."
+        },
+        {
+            "endpoint": "/api/checkaddress",
+            "methods": ["POST"],
+            "description": "Check wallet addresses against flagged datasets."
+        },
+    
+        {
+            "endpoint": "/api/metrics",
+            "methods": ["POST"],
+            "description": "Fetch wallet metrics for a given address."
+        },
+        {
+            "endpoint": "/api/narrative",
+            "methods": ["POST"],
+            "description": "Generate a financial narrative from provided metrics."
+        },
+        {
+            "endpoint": "/api/origins",
+            "methods": ["POST"],
+            "description": "Analyze and fetch origin data for wallet addresses."
+        },
+        {
+            "endpoint": "/api/visualize",
+            "methods": ["POST"],
+            "description": "Generate and upload a family tree visualization."
+        },
+        {
+            "endpoint": "/api/full_report",
+            "methods": ["POST"],
+            "description": "Generate a comprehensive full report for a wallet."
+        },
     ]
     return endpoints
 
@@ -72,4 +100,3 @@ def calculate_health(overrides=None):
         "overall_status": overall_status,
         "endpoints": endpoints
     }
-

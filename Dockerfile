@@ -18,4 +18,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 5328
 
 # Command to run the application with Gunicorn
-CMD ["gunicorn", "api.index:app", "--bind", "0.0.0.0:5328", "--workers", "2", "--threads", "4", "--timeout", "300"]
+CMD ["gunicorn", "api.index:app", "--bind", "0.0.0.0:5328", "--workers", "4", "--threads", "2", "--timeout", "1200", "--graceful-timeout", "300", "--keep-alive", "120", "--log-level", "info"]

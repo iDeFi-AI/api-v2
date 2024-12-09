@@ -4,8 +4,8 @@ import * as React from 'react'
 import Header from '@/components/layouts/Header'
 
 export const metadata: Metadata = {
-  title: 'Monitor',
-  description: 'AI-Monitor',
+  title: 'Narratives',
+  description: 'Generate Narratives',
 }
 
 const MainLayout: React.FC<React.PropsWithChildren> = ({ children }) => {

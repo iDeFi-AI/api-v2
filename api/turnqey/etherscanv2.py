@@ -45,6 +45,21 @@ SUPPORTED_CHAINS = {
     "blast": 81457,
     "optimism": 10,
     "snow": 43114,
+    "bttc": 199,
+    "celo": 42220,
+    "cronos": 25,
+    "frax": 252,
+    "gnosis": 100,
+    "kroma": 255,
+    "mantle": 5000,
+    "moonbeam": 1284,
+    "moonriver": 1285,
+    "opbnb": 204,
+    "scroll": 534352,
+    "taiko": 167000,
+    "wemix": 1111,
+    "zksync": 324,
+    "xai": 660279,
 }
 
 # API Base URL
@@ -53,21 +68,23 @@ API_URL = "https://api.etherscan.io/api"
 # Rate limit settings
 RATE_LIMIT_DELAY = 0.25  # Delay between requests (in seconds)
 
+# Validate Ethereum address
 def is_valid_ethereum_address(address):
     """Validate Ethereum address format."""
     return bool(re.match(ETHEREUM_ADDRESS_PATTERN, address))
 
+# Convert value from wei to Ether
 def wei_to_ether(wei):
     """Convert wei to Ether."""
     return float(wei) / 10**18
 
+# Clean and enrich transactions
 def clean_transaction_data(transactions):
     """Clean and enrich transaction data."""
     cleaned_data = []
     for tx in transactions:
-        # Filter out transactions with no 'to' address or zero value
         if not tx.get("to") or tx.get("value") == "0":
-            continue
+            continue  # Exclude irrelevant transactions
 
         cleaned_tx = {
             "blockNumber": tx.get("blockNumber"),
@@ -84,10 +101,11 @@ def clean_transaction_data(transactions):
         }
         cleaned_data.append(cleaned_tx)
 
-    # Sort by timestamp for chronological order
+    # Sort by timestamp
     cleaned_data.sort(key=lambda x: int(x["timeStamp"]))
     return cleaned_data
 
+# Fetch transactions with retries
 async def fetch_transactions(chain_id, wallet_address, startblock=0, endblock=99999999, sort="asc", retries=3, timeout=10):
     """
     Fetch transaction data for a wallet address on a specific chain using Etherscan API.
@@ -106,7 +124,7 @@ async def fetch_transactions(chain_id, wallet_address, startblock=0, endblock=99
     async with httpx.AsyncClient(timeout=timeout) as client:
         for attempt in range(retries):
             try:
-                logger.info(f"Fetching transactions for {wallet_address} on chain {chain_id} (attempt {attempt + 1})")
+                logger.info(f"Fetching transactions for wallet {wallet_address} on chain {chain_id} (attempt {attempt + 1})")
                 response = await client.get(API_URL, params=params)
                 response.raise_for_status()
                 data = response.json()
@@ -128,29 +146,22 @@ async def fetch_transactions(chain_id, wallet_address, startblock=0, endblock=99
     logger.error(f"Failed to fetch transactions for {wallet_address} on chain {chain_id} after {retries} attempts.")
     return []
 
+# Process transactions for a specific chain
 async def process_chain_transactions(chain_name, wallet_address):
     """
     Process transactions for a given chain by chain name.
-    Returns only cleaned transactions for that chain.
     """
     chain_id = SUPPORTED_CHAINS.get(chain_name)
     if not chain_id:
         logger.warning(f"Unsupported chain: {chain_name}")
         return []
 
-    transactions = await fetch_transactions(chain_id, wallet_address)
-    return transactions
+    return await fetch_transactions(chain_id, wallet_address)
 
+# Main function to handle multi-chain transaction fetching
 async def get_transaction_data(wallet_address, chains=None, startblock=0, endblock=99999999):
     """
-    Fetch transaction data across multiple chains and return a list of dictionaries:
-    [
-      {
-        "chain": "ethereum",
-        "transactions": [...]
-      },
-      ...
-    ]
+    Fetch transaction data across multiple chains.
     """
     if not is_valid_ethereum_address(wallet_address):
         raise ValueError(f"Invalid Ethereum address: {wallet_address}")
@@ -175,8 +186,8 @@ async def get_transaction_data(wallet_address, chains=None, startblock=0, endblo
 
     return results if results else []
 
+# Entry point for testing
 if __name__ == "__main__":
-    # Example usage:
     wallet = "0xYourWalletAddressHere"
     chains_to_query = ["ethereum", "bsc", "polygon", "arbitrum", "optimism", "base"]
     asyncio.run(get_transaction_data(wallet, chains_to_query))

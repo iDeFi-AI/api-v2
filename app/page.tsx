@@ -184,7 +184,7 @@ function LoginSection({ setHasAccount }: { setHasAccount: (value: boolean) => vo
       setAuthToken(idToken);
       console.log(`User authenticated: ${uid}, ${userEmail}`);
 
-      window.location.href = '/devs';
+      window.location.href = '/docs';
     } catch (err: any) {
       console.error('Error authenticating:', err);
       setError(err.message || 'Invalid email or password. Please try again.');
