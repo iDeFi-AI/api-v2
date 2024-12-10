@@ -7,6 +7,7 @@ from firebase_admin import credentials, storage
 import firebase_admin
 import json
 import base64
+import re
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -56,7 +57,7 @@ EXTERNAL_LOGO_URL = "https://cdn.prod.website-files.com/631ee5b346419b93f92caf9a
 
 async def generate_openai_narrative(metrics, date):
     """
-    Generate a professional financial report narrative based on wallet metrics.
+    Generate a professional wallet activity report narrative based on metrics.
     """
     if not metrics or not date:
         raise ValueError("Metrics and date are required.")
@@ -69,7 +70,7 @@ async def generate_openai_narrative(metrics, date):
     """
 
     prompt = f"""
-        Generate a professional financial report narrative based on the following wallet metrics:
+        Generate a professional advisor based email wallet activity report based on the following metrics:
         Date: {date}
         Wallet Address: {metrics['wallet_address']}
         Total Transactions: {metrics['financialMetrics']['totalTransactions']}
@@ -85,7 +86,7 @@ async def generate_openai_narrative(metrics, date):
         response = await openai.ChatCompletion.acreate(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a professional financial advisor creating wallet reports."},
+                {"role": "system", "content": "You are a professional financial advisor creating wallet activity reports."},
                 {"role": "user", "content": prompt.strip()},
             ],
         )
@@ -93,157 +94,224 @@ async def generate_openai_narrative(metrics, date):
     except Exception as e:
         raise RuntimeError(f"Error generating narrative: {e}")
 
-def format_as_html_template(narrative, date):
-    """
-    Formats the narrative into a styled HTML template with an option to edit or copy content.
-    """
-    # Clean and format narrative text
-    cleaned_narrative = (
-        narrative.replace("### ", "<h3>")
-                 .replace("## ", "<h2>")
-                 .replace("#", "")  # Remove single hash artifacts
-                 .replace("**", "<strong>")
-                 .replace(" --- ", "<br><br>")
-    )
 
-    # Return the HTML template
+def format_as_html_template(narrative, date, wallet_address):
+    """
+    Formats the narrative into a styled HTML template with:
+    - Proper title placement in the header
+    - Clean and professional styling
+    """
+    # Convert Markdown-style syntax to proper HTML
+    def parse_markdown(text):
+        text = re.sub(r"### (.+)", r"<h3>\1</h3>", text)  # H3
+        text = re.sub(r"## (.+)", r"<h2>\1</h2>", text)   # H2
+        text = re.sub(r"# (.+)", r"<h1>\1</h1>", text)    # H1
+        text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)  # Bold
+        text = re.sub(r"^- (.+)", r"<p>- \1</p>", text, flags=re.MULTILINE)  # Lists
+        text = re.sub(r"\n(?!<(h[1-3]|strong|p))", r"<p>", text)  # Newlines to <p>
+        return text
+
+    cleaned_narrative = parse_markdown(narrative)
+
     return f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
             body {{
-                font-family: Arial, sans-serif;
-                background-color: #f9f9f9;
+                font-family: 'Roboto', Arial, sans-serif;
+                background-color: #f4f4f4;
                 margin: 0;
                 padding: 0;
+                color: #333;
             }}
             .container {{
                 max-width: 900px;
-                margin: 30px auto;
-                padding: 20px;
-                background: #ffffff;
+                margin: 40px auto;
+                background: #fff;
                 border-radius: 12px;
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
             }}
             .header {{
+                position: relative;
+                color: white;
                 text-align: center;
-                margin-bottom: 20px;
+                background: linear-gradient(135deg, #6600ff, #8e24aa);
+                background-image: url('{EXTERNAL_LOGO_URL}');
+                background-size: cover;
+                background-position: center;
+                padding: 80px 20px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
             }}
-            .logo {{
-                height: 120px;
-                border-radius: 12px;
+            .header h1 {{
+                font-size: 32px;
+                font-weight: 700;
+                margin: 0;
+                background-color: rgba(0, 0, 0, 0.6);
+                padding: 10px 20px;
+                border-radius: 8px;
             }}
             .content {{
-                line-height: 1.8;
-                color: #333;
-                font-size: 16px;
+                padding: 20px;
             }}
-            .content h1 {{
-                text-align: center;
-                color: #4a90e2;
-                margin-bottom: 20px;
+            h1 {{
+                font-size: 24px;
+                font-weight: bold;
+                color: #6600ff;
+                margin: 0;
+                color: #6600ff;
             }}
-            .content h2 {{
+            h2 {{
                 font-size: 20px;
-                color: #333;
+                color: #8e24aa;
                 margin-top: 20px;
-                border-bottom: 2px solid #ddd;
+                border-bottom: 2px solid #e9ecef;
                 padding-bottom: 5px;
+            }}
+            h3 {{
+                font-size: 18px;
+                color: #495057;
+                margin-top: 15px;
+            }}
+            p {{
+                margin-bottom: 15px;
+                text-align: justify;
+                font-size: 16px;
+                line-height: 1.6;
+            }}
+            strong {{
+                font-weight: bold;
+                color: #000;
+            }}
+            .button-container {{
+                text-align: right;
+                margin-bottom: 10px;
+            }}
+            .title-container {{
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                margin: 20px 0;
+                padding: 0 20px;
+                border-bottom: 1px solid #e9ecef;
             }}
-            .content h3 {{
-                font-size: 18px;
-                color: #555;
-                margin-top: 15px;
-            }}
-            .content p {{
-                margin: 10px 0;
-                text-align: justify;
-            }}
-            .note {{
-                background: #f1f8ff;
-                padding: 8px 12px;
-                border-left: 4px solid #007bff;
-                border-radius: 8px;
-                font-size: 14px;
-                color: #333;
-            }}
-            .button-container {{
-                display: flex;
-                align-items: center;
-                gap: 8px;
+            .title-container h1 {{
+                font-size: 24px;
+                font-weight: bold;
+                color: #6600ff;
+                margin: 0;
             }}
             .button {{
-                background: #007bff;
-                color: #fff;
-                padding: 5px 10px;
-                font-size: 14px;
+                background: #6600ff;
+                color: white;
                 border: none;
+                padding: 8px 15px;
                 border-radius: 5px;
                 cursor: pointer;
+                font-size: 14px;
+                transition: background 0.3s;
+                margin-left: 10px;
             }}
             .button:hover {{
-                background: #0056b3;
+                background: #4a148c;
+            }}
+            .editable {{
+                font-size: 16px;
+                line-height: 1.6;
+                padding: 10px;
+                border: 1px solid transparent;
+                background: #f9f9f9;
+                border-radius: 5px;
+                outline: none;
+                transition: border 0.3s, background 0.3s;
+            }}
+            .editable[contenteditable="true"] {{
+                border: 1px solid #6600ff;
+                background: #fff;
             }}
             .footer {{
                 text-align: center;
-                margin-top: 20px;
+                padding: 10px;
                 font-size: 14px;
+                background-color: #f8f8f8;
                 color: #555;
-            }}
-            a {{
-                color: #4a90e2;
-                text-decoration: none;
-            }}
-            a:hover {{
-                text-decoration: underline;
+                border-top: 1px solid #e9ecef;
             }}
         </style>
-        <title>Financial Report</title>
+        <title>Wallet Activity Report</title>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <img src="https://cdn.prod.website-files.com/631ee5b346419b93f92caf9a/631f8989dada7e625bfa2660_401_Website_Cover-01-01.jpg" alt="401 Financial Logo" class="logo">
-                <h1>Financial Report</h1>
             </div>
             <div class="content">
                 <p><strong>Date:</strong> {date}</p>
-                <h2>
-                    Report Narrative
+                <p><strong>Wallet Address:</strong> {wallet_address}</p>
+                        
+                <!-- Title and Buttons -->
+                <div class="title-container">
+                    <h1 class="title">Wallet Activity Report</h1>
                     <div class="button-container">
-                        <span class="note">You can edit this content directly or copy it for further use.</span>
-                        <button class="button" onclick="alert('Edit functionality coming soon!')">Edit</button>
-                        <button class="button" onclick="navigator.clipboard.writeText(document.body.innerText)">Copy</button>
+                        <button id="editButton" class="button" onclick="enableEditing()">Edit</button>
+                        <button id="saveButton" class="button" style="display: none;" onclick="saveChanges()">Save</button>
+                        <button id="copyButton" class="button" onclick="copyContent()">Copy</button>
                     </div>
-                </h2>
-                {cleaned_narrative}
+                </div>
+                
+                <div id="reportContent" contenteditable="false" class="editable">
+                    {cleaned_narrative}
+                </div>
             </div>
             <div class="footer">
-                <p>Generated by <strong>401 Financial</strong></p>
-                <p><a href="https://api-v2.idefi.ai">Visit Our Platform</a></p>
+                <p>© 2024 401 Financial. All Rights Reserved.</p>
             </div>
         </div>
+        <script>
+            function enableEditing() {{
+                const reportContent = document.getElementById('reportContent');
+                const saveButton = document.getElementById('saveButton');
+                const editButton = document.getElementById('editButton');
+                reportContent.contentEditable = "true";
+                reportContent.style.border = "1px solid #6600ff";
+                reportContent.style.background = "#fff";
+                saveButton.style.display = "inline-block";
+                editButton.style.display = "none";
+            }}
+
+            function saveChanges() {{
+                const reportContent = document.getElementById('reportContent');
+                const saveButton = document.getElementById('saveButton');
+                const editButton = document.getElementById('editButton');
+                reportContent.contentEditable = "false";
+                reportContent.style.border = "none";
+                reportContent.style.background = "none";
+                saveButton.style.display = "none";
+                editButton.style.display = "inline-block";
+                alert('Changes saved!');
+            }}
+
+            function copyContent() {{
+                const reportContent = document.getElementById('reportContent').innerText;
+                navigator.clipboard.writeText(reportContent).then(() => {{
+                    alert('Content copied to clipboard!');
+                }}).catch(err => {{
+                    console.error('Failed to copy: ', err);
+                }});
+            }}
+        </script>
     </body>
     </html>
     """
 
 def upload_to_firebase(content, wallet_address):
-    """
-    Upload content to Firebase and return its public URL.
-
-    Args:
-        content (str): Content to upload.
-        wallet_address (str): Ethereum wallet address for naming.
-
-    Returns:
-        str: Public URL of the uploaded file.
-    """
     file_name = f"{wallet_address}_{uuid.uuid4().hex}.html"
     blob_path = f"narratives/{file_name}"
     blob = bucket.blob(blob_path)
@@ -255,15 +323,9 @@ def upload_to_firebase(content, wallet_address):
     return blob.public_url
 
 def generate_narrative(metrics, date, wallet_address):
-    """
-    Generate a narrative, format it as HTML, and upload to Firebase.
-
-    Returns:
-        dict: URL for HTML narrative.
-    """
     try:
         narrative = asyncio.run(generate_openai_narrative(metrics, date))
-        full_html = format_as_html_template(narrative, date)
+        full_html = format_as_html_template(narrative, date, wallet_address)
         html_url = upload_to_firebase(full_html, wallet_address)
         return {"html_url": html_url}
     except Exception as e:

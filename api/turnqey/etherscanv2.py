@@ -32,8 +32,6 @@ ETHEREUM_ADDRESS_PATTERN = r"0x[a-fA-F0-9]{40}"
 # Supported Chains with Chain IDs
 SUPPORTED_CHAINS = {
     "ethereum": 1,
-    "sepolia": 11155111,
-    "holesky": 17000,
     "bsc": 56,
     "polygon": 137,
     "zkEVM_polygon": 1101,
@@ -55,8 +53,6 @@ SUPPORTED_CHAINS = {
     "moonbeam": 1284,
     "moonriver": 1285,
     "opbnb": 204,
-    "scroll": 534352,
-    "taiko": 167000,
     "wemix": 1111,
     "zksync": 324,
     "xai": 660279,
